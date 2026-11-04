@@ -17,7 +17,10 @@ export default function Instructions({ paper, onStart, onBack }: Props) {
       <header className="examBar">
         <div className="examBarLeft">
           <span className="examTitle">{paper.title}</span>
-          <span className="examSub">General instructions</span>
+          <span className="examSub">
+            General instructions
+            {paper.exam !== "General" && <span className="chip examChip">{paper.exam}</span>}
+          </span>
         </div>
         <div className="examBarRight">
           <div className="clockBox">

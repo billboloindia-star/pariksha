@@ -33,3 +33,4 @@ class AttemptRecord(BaseModel):
     avgSec: Optional[float] = None
     byTopic: Optional[Dict[str, TopicTally]] = None
     tabSwitches: Optional[int] = None
+    exam: Optional[str] = None

@@ -1,6 +1,8 @@
 # Paper format for the runner
 
-The app reads one paper file — either **JSON** or **YAML** (JSON is a subset of YAML, so the same content works in both). Load it with the file picker, or paste the text into the box and press *Read pasted text*.
+The app reads one paper file — either **JSON** or **YAML** (JSON is a subset of YAML, so the same content works in both). Load it with the file picker, or paste the text into the box and press *Read pasted text*. This format works for any exam — IBPS, JEE, NEET, CAT, GATE, CA, law, whatever you're preparing for.
+
+Don't have a paper in this format yet? The home screen has a ready-to-copy prompt (with a worked example built in) that you can hand to any AI chat assistant along with your own PDF or photo of a previous paper, and it will convert it for you.
 
 ---
 
@@ -8,6 +10,7 @@ The app reads one paper file — either **JSON** or **YAML** (JSON is a subset o
 
 ```yaml
 title: "Demo paper - mixed quant"      # any text, shown on the exam screen
+exam: "IBPS RRB PO"                    # optional; shown as a badge. Defaults to "General"
 duration_minutes: 10                   # whole minutes; the clock counts down from this
 negative_marking: 0.25                 # marks deducted per wrong answer (0 disables it)
 

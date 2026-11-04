@@ -1,6 +1,12 @@
-# RRB PO exam interface — React + TypeScript
+# Pariksha — timed mock exams for any subject
 
-A local exam app: load a paper (`.json` / `.yml`), write it in a proper exam interface, then read a full analysis.
+A mock-exam runner: load a paper (`.json` / `.yml`) for any exam — IBPS, JEE, NEET, CAT, GATE, CA,
+law, whatever you're preparing for — write it in a proper timed exam interface, then read a full
+analysis. Live at [pariksha.billbolo.in](https://pariksha.billbolo.in).
+
+Don't have a paper in that format yet? The home screen has a ready-to-copy prompt you can paste
+into ChatGPT/Gemini/Claude along with your own PDF or photo of a previous-year paper, and it hands
+back a file you can upload straight away.
 
 ## Run it
 
@@ -35,6 +41,7 @@ See `paper_format.md`. Short version:
 
 ```yaml
 title: "My paper"
+exam: "JEE"                   # optional, shown as a badge; defaults to "General"
 duration_minutes: 20
 negative_marking: 0.25
 sections:
@@ -58,7 +65,8 @@ sections:
 ```
 
 Load it with the file picker on the home screen, or paste the text and press *Read pasted paper*.
-`demo_paper.yml` ships with the project as a working example (also embedded behind *Load the demo paper*).
+`demo_paper.yml` (IBPS RRB) and `demo_paper_jee.yml` (JEE) ship as working examples, each loadable
+from its own button on the home screen.
 
 ## What the analysis gives you
 
@@ -69,7 +77,10 @@ Load it with the file picker on the home screen, or paste the text and press *Re
 - every wrong answer with your value against the correct one, plus its `solution`
 - **question-by-question review**: every question with your answer, the right answer, the time it took and its solution
 - **CSV export** of that log, for your own records
-- attempt history, kept in `localStorage` on your machine
+- attempt history, kept in `localStorage` on your machine, and synced to your account when you're
+  logged in on the live site
+- a **progress** section once you have more than one attempt: net score, accuracy, average time
+  and topic-accuracy trends, drawn as inline SVG charts
 
 The exam interface also supports **per-section clocks** (`section_duration_minutes` in the paper):
 a section locks when its time is up and the paper moves on, the way the real prelims works.
@@ -80,17 +91,23 @@ Keyboard: `1`–`5` pick an option, `Enter` saves and advances, `←` `→` move
 ```
 src/
   main.tsx            entry
-  App.tsx             phase switch: home -> instructions -> exam -> report
+  App.tsx             phase switch: home -> login -> syscheck -> instructions -> exam -> report
   types.ts            paper + state types, status derivation
   yaml.ts             minimal YAML reader for the paper format
   paper.ts            parse + validate a paper into the internal shape
-  useExam.ts          exam state: navigation, timing per question, clock
+  useExam.ts          exam state: navigation, timing per question, clock, tab-switch tracking
+  api.ts              optional backend client (accounts + attempt history)
+  aiPrompt.ts          the copyable "convert your paper" prompt + worked example
   components/
-    Home.tsx          file picker / paste box
+    Home.tsx          file picker / paste box / AI conversion prompt
+    Login.tsx         email + password sign up / log in (only shown if a backend is configured)
+    SystemCheck.tsx   cosmetic pre-exam system check screen
     Instructions.tsx  pre-exam instructions with the agree checkbox
     Exam.tsx          the exam interface (top bar, tabs, question, palette)
-    Report.tsx        the analysis screen
+    Report.tsx        the analysis screen + progress trend charts
+    TrendChart.tsx    small inline-SVG line chart used by Report
   styles.css          all styling
+pariksha-backend/      optional FastAPI + Lambda backend (accounts, attempt history)
 ```
 
 ## Editing it

@@ -1,0 +1,57 @@
+title: "Demo paper - JEE Main style"
+exam: "JEE"
+duration_minutes: 8
+negative_marking: 1
+
+sections:
+  - name: "Physics"
+    questions:
+      - id: P1
+        topic: "Kinematics"
+        type: mc
+        question: "A body starts from rest and accelerates uniformly at 2 m/s². What is its speed after 5 s?"
+        options: ["5 m/s", "10 m/s", "15 m/s", "20 m/s"]
+        answer_index: 1
+        solution: "v = u + at = 0 + 2×5 = 10 m/s"
+
+      - id: P2
+        topic: "Units and Dimensions"
+        type: mc
+        question: "The dimensional formula of force is:"
+        options: ["[MLT⁻¹]", "[MLT⁻²]", "[ML²T⁻²]", "[ML⁻¹T⁻²]"]
+        answer_index: 1
+        solution: "F = ma → [M][LT⁻²] = [MLT⁻²]"
+
+  - name: "Chemistry"
+    questions:
+      - id: C1
+        topic: "Mole Concept"
+        type: num
+        question: "How many moles are there in 44 g of CO₂? (molar mass = 44 g/mol)"
+        answer: 1
+        solution: "moles = mass ÷ molar mass = 44 ÷ 44 = 1"
+
+      - id: C2
+        topic: "Periodic Table"
+        type: mc
+        question: "Which element has the highest electronegativity?"
+        options: ["Oxygen", "Nitrogen", "Fluorine", "Chlorine"]
+        answer_index: 2
+        solution: "Fluorine has the highest electronegativity on the periodic table."
+
+  - name: "Mathematics"
+    questions:
+      - id: M1
+        topic: "Quadratic Equations"
+        type: mc
+        question: "If one root of x² − 7x + k = 0 is 3, what is the value of k?"
+        options: ["8", "10", "12", "14"]
+        answer_index: 2
+        solution: "3 is a root, so 9 − 21 + k = 0 → k = 12"
+
+      - id: M2
+        topic: "Permutations"
+        type: num
+        question: "In how many ways can 4 distinct books be arranged on a shelf?"
+        answer: 24
+        solution: "4! = 24"

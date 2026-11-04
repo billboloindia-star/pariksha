@@ -52,6 +52,7 @@ export default function Report({ result, onAgain }: Props) {
       avgSec: Number(avgSec.toFixed(1)),
       byTopic: Object.fromEntries(Object.entries(byTopic).map(([k, t]) => [k, { ok: t.ok, att: t.att }])),
       tabSwitches,
+      exam: paper.exam,
     };
 
     let local: AttemptRecord[] = [];
@@ -70,7 +71,7 @@ export default function Report({ result, onAgain }: Props) {
         .then(setHistory)
         .catch(() => { /* keep the local-only history already shown */ });
     }
-  }, [paper.title, net, total, correct, wrong, skipped, elapsedSec, accuracy, avgSec, byTopic, tabSwitches]);
+  }, [paper.title, paper.exam, net, total, correct, wrong, skipped, elapsedSec, accuracy, avgSec, byTopic, tabSwitches]);
 
   const slowest = useMemo(
     () =>
@@ -258,7 +259,10 @@ export default function Report({ result, onAgain }: Props) {
               const stamp = `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
               return (
                 <div className="listRow" key={i}>
-                  <span className="muted">{h.title.length > 26 ? h.title.slice(0, 25) + "…" : h.title} · {stamp}</span>
+                  <span className="muted">
+                    {h.exam && h.exam !== "General" && <span className="chip historyExamChip">{h.exam}</span>}
+                    {h.title.length > 26 ? h.title.slice(0, 25) + "…" : h.title} · {stamp}
+                  </span>
                   <span>net {h.net.toFixed(2)}/{h.total} · {fmt(h.secs)}</span>
                 </div>
               );

@@ -1,10 +1,21 @@
-# Handoff — RRB PO exam app
+# Handoff — Pariksha
 
-A local exam app for IBPS RRB PO (Officer Scale I) practice. You load a paper file (JSON or YAML),
-write it in an interface modelled on the real IBPS exam screen, and get a full analysis afterwards.
+A timed mock-exam app for **any** exam, not just one. You load a paper file (JSON or YAML), write
+it in an interface modelled on the real IBPS exam screen (sectional clocks, question palette, the
+works), and get a full analysis afterwards. The paper format and engine are exam-agnostic; the
+IBPS-style interface is just the one realism model it's built around — a paper can carry an
+`exam:` field ("JEE", "NEET", "CAT", ...) shown as a badge throughout. Live at
+[pariksha.billbolo.in](https://pariksha.billbolo.in).
 
-Stack: **React 19 + TypeScript + Vite**. No UI library, no state library, no backend, no network calls.
-Everything runs on the user's own machine.
+The content model is **bring-your-own-paper**: there's no central library to curate. The home
+screen has a one-click "copy prompt + example" block someone pastes into any AI chat alongside
+their own PDF/photo of a previous paper, which hands back a ready-to-upload file.
+
+Stack: **React 19 + TypeScript + Vite** frontend, no UI library, no state library, builds to one
+offline `dist/index.html`. An *optional* **FastAPI + Lambda** backend (`pariksha-backend/`, under
+the `billbolo` AWS account) adds email/password accounts and cross-device attempt history — see
+`pariksha-backend/README.md`. With no backend configured (`VITE_API_URL` unset), the app is 100%
+local: everything runs on the user's own machine, no network calls, no login.
 
 ---
 
@@ -210,17 +221,19 @@ Gotchas when driving React from a script:
 
 ## 11. Brief to paste into another AI
 
-> This is a React 19 + TypeScript + Vite exam app for IBPS RRB PO practice. It loads a paper from a
-> JSON/YAML file, runs it in an IBPS-style interface (section tabs, question palette with five
-> statuses, per-question timing, optional per-section clocks), and produces an analysis screen with
-> net score, accuracy, average time per question, topic-wise stats, slowest answers, a
-> question-by-question review and CSV export.
+> This is Pariksha, a React 19 + TypeScript + Vite timed mock-exam app for any exam (IBPS, JEE,
+> NEET, CAT, GATE, CA...), not just one. It loads a paper from a JSON/YAML file, runs it in an
+> IBPS-style interface (section tabs, question palette with five statuses, per-question timing,
+> optional per-section clocks), and produces an analysis screen with net score, accuracy, average
+> time per question, topic-wise stats, slowest answers, a question-by-question review, CSV export,
+> and progress trend charts across stored attempts. An optional FastAPI + Lambda backend
+> (`pariksha-backend/`) adds email/password accounts and cross-device attempt history.
 >
 > Read `HANDOFF.md` first, then `src/types.ts`, `src/paper.ts`, `src/useExam.ts`,
 > `src/components/Exam.tsx` and `src/components/Report.tsx`. All exam state lives in `useExam`; keep it
-> that way. No UI libraries, no new runtime dependencies, plain CSS with variables, strict TypeScript,
-> and the build must stay a single self-contained `dist/index.html` that runs offline.
+> that way. No UI libraries, no new frontend runtime dependencies, plain CSS with variables, strict
+> TypeScript, and `npm run build` with no `VITE_API_URL` set must stay a single self-contained
+> `dist/index.html` that runs fully offline with no login.
 >
-> The user is a student preparing for an exam on the 21st, on macOS. Prefer small, verified changes:
-> run `npx tsc --noEmit` and `npx vite build` after every edit, and drive the built file in headless
-> Chromium to confirm the flow still works.
+> Prefer small, verified changes: run `npx tsc --noEmit` and `npx vite build` after every edit, and
+> drive the built file in headless Chromium to confirm the flow still works.

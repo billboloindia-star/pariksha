@@ -26,6 +26,7 @@ export interface RawSection {
 
 export interface RawPaper {
   title?: string;
+  exam?: string;
   duration_minutes?: number;
   negative_marking?: number;
   sections?: RawSection[];
@@ -54,6 +55,7 @@ export interface SectionInfo {
 
 export interface Paper {
   title: string;
+  exam: string;
   durationMinutes: number;
   negativeMarking: number;
   sections: SectionInfo[];
@@ -90,6 +92,7 @@ export interface AttemptRecord {
   avgSec?: number;
   byTopic?: Record<string, { ok: number; att: number }>;
   tabSwitches?: number;
+  exam?: string;
 }
 
 export interface TopicStat {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useExam } from "../useExam";
+import * as api from "../api";
 import type { ExamResult, Paper, Status, TopicStat } from "../types";
 
 interface Props {
@@ -24,9 +25,22 @@ function clock(s: number) {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
 }
 
+function candidateDisplayName(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  return local
+    .replace(/[._-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 export default function Exam({ paper, onFinish }: Props) {
   const noop = useRef(() => {});
   const exam = useExam(paper, noop.current);
+  const session = api.getSession();
+  const candidateName = session ? candidateDisplayName(session.email) : "Guest candidate";
+  const candidateInitials = (session ? candidateName : "G").slice(0, 2).toUpperCase();
   const q = paper.questions[exam.idx];
   const st = exam.states[exam.idx];
   const [draft, setDraft] = useState<string>("");
@@ -114,10 +128,10 @@ export default function Exam({ paper, onFinish }: Props) {
             <span className="clockValue">{clock(exam.remaining)}</span>
           </div>
           <div className="candMini">
-            <span className="avatar">RN</span>
+            <span className="avatar">{candidateInitials}</span>
             <div>
-              <b>Rohit Nandy</b>
-              <small>Roll 2026-RRB-0417</small>
+              <b>{candidateName}</b>
+              <small>{paper.exam}</small>
             </div>
           </div>
         </div>

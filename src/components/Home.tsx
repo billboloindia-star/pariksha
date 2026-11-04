@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import { parsePaper } from "../paper";
 import type { Paper } from "../types";
 import demoPaper from "../../demo_paper.yml?raw";
+import demoPaperJee from "../../demo_paper_jee.yml?raw";
+import { aiConversionPrompt } from "../aiPrompt";
 import * as api from "../api";
 
 interface Props {
@@ -14,6 +16,8 @@ export default function Home({ onLoaded, session, onLogout }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function load(text: string) {
@@ -36,19 +40,30 @@ export default function Home({ onLoaded, session, onLogout }: Props) {
     rd.readAsText(f);
   }
 
-  function loadDemo() {
-    setPasted(demoPaper);
-    load(demoPaper);
+  function loadDemo(text: string) {
+    setPasted(text);
+    load(text);
+  }
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(aiConversionPrompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Could not copy automatically — select and copy the text below by hand.");
+      setShowPrompt(true);
+    }
   }
 
   return (
     <div className="home">
       <header className="homeHead">
         <div className="brand">
-          <span className="brandMark">RRB</span>
+          <span className="brandMark">P</span>
           <div>
             <h1>Pariksha</h1>
-            <p>Load a paper, write it in exam conditions, then read the analysis.</p>
+            <p>Load any exam's paper, write it in timed conditions, then read the analysis.</p>
           </div>
         </div>
         {api.backendEnabled() && session && (
@@ -79,10 +94,29 @@ export default function Home({ onLoaded, session, onLogout }: Props) {
             <button className="btn primary" onClick={() => load(pasted)} disabled={!pasted.trim()}>
               Read pasted paper
             </button>
-            <button className="btn" onClick={loadDemo}>Load the demo paper</button>
+            <button className="btn" onClick={() => loadDemo(demoPaper)}>IBPS RRB demo</button>
+            <button className="btn" onClick={() => loadDemo(demoPaperJee)}>JEE demo</button>
           </div>
         </section>
       </div>
+
+      <section className="card promptCard">
+        <h2>3 · Don't have a YAML yet? Convert your own paper</h2>
+        <p className="muted">
+          Have a previous year paper as a PDF, photo, or text? Copy this prompt, paste it into
+          ChatGPT, Gemini, or Claude along with your paper, and it will hand back a ready-to-upload
+          file — for any exam, not just the ones above.
+        </p>
+        <div className="rowBtns">
+          <button className="btn primary" onClick={copyPrompt}>
+            {copied ? "Copied!" : "Copy prompt + example"}
+          </button>
+          <button className="btn" onClick={() => setShowPrompt((v) => !v)}>
+            {showPrompt ? "Hide" : "Show"} the prompt
+          </button>
+        </div>
+        {showPrompt && <pre className="promptPreview">{aiConversionPrompt}</pre>}
+      </section>
 
       {error && <pre className="error">{error}</pre>}
 
