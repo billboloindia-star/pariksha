@@ -3,9 +3,10 @@ import * as api from "../api";
 
 interface Props {
   onDone: (session: api.Session) => void;
+  onBack: () => void;
 }
 
-export default function Login({ onDone }: Props) {
+export default function Login({ onDone, onBack }: Props) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,6 +70,9 @@ export default function Login({ onDone }: Props) {
             <button className="btn" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
               {mode === "login" ? "Need an account? Sign up" : "Have an account? Log in"}
             </button>
+          </div>
+          <div className="rowBtns">
+            <button className="btn" onClick={onBack}>Back to Pariksha</button>
           </div>
         </section>
       </div>

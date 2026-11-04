@@ -13,7 +13,7 @@ type Phase = "home" | "login" | "syscheck" | "instructions" | "exam" | "report";
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
-  const [phase, setPhase] = useState<Phase>(() => (api.backendEnabled() && !session ? "login" : "home"));
+  const [phase, setPhase] = useState<Phase>("home");
   const [paper, setPaper] = useState<Paper | null>(null);
   const [result, setResult] = useState<ExamResult | null>(null);
 
@@ -39,15 +39,15 @@ export default function App() {
         <Home
           onLoaded={onLoaded}
           session={session}
+          onLogin={() => setPhase("login")}
           onLogout={() => {
             api.setSession(null);
             setSession(null);
-            setPhase(api.backendEnabled() ? "login" : "home");
           }}
         />
       )}
       {phase === "login" && (
-        <Login onDone={(s) => { setSession(s); setPhase("home"); }} />
+        <Login onDone={(s) => { setSession(s); setPhase("home"); }} onBack={() => setPhase("home")} />
       )}
       {phase === "syscheck" && paper && (
         <SystemCheck paper={paper} onBack={again} onProceed={() => setPhase("instructions")} />
