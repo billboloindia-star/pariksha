@@ -6,6 +6,7 @@ import demoPaperJee from "../../demo_paper_jee.yml?raw";
 import { aiConversionPrompt } from "../aiPrompt";
 import * as api from "../api";
 import Marketing from "./Marketing";
+import Logo from "./Logo";
 
 interface Props {
   onLoaded: (p: Paper) => void;
@@ -88,7 +89,7 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
     <div className="home">
       <header className="homeHead">
         <div className="brand">
-          <span className="brandMark">P</span>
+          <Logo size={52} />
           <div>
             <h1>Pariksha</h1>
             <p>Load any exam's paper, write it in timed conditions, then read the analysis.</p>

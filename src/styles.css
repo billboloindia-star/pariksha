@@ -34,7 +34,6 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .homeHead{margin-bottom:26px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .accountRow{display:flex;align-items:center;gap:10px}
 .brand{display:flex;gap:16px;align-items:center}
-.brandMark{display:grid;place-items:center;width:52px;height:52px;border-radius:12px;background:var(--navy);color:#fff;font-weight:800;letter-spacing:.5px}
 .brand h1{margin:0;font-size:26px;letter-spacing:-.4px}
 .brand p{margin:2px 0 0;color:var(--dim);font-size:14px}
 .homeGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -289,4 +288,43 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   .mktFeatures{grid-template-columns:1fr}
   .mktHowGrid{grid-template-columns:1fr}
   .mktHowTitle{font-size:24px}
+}
+
+/* ---------- auth (login / signup) ---------- */
+.authSplit{min-height:100vh;display:grid;grid-template-columns:minmax(0,440px) 1fr}
+.authPanel{background:linear-gradient(145deg,#1a4d80,#0a1b36);color:#fff;padding:40px;display:flex;flex-direction:column}
+.authBrand{display:flex;align-items:center;gap:12px;margin-bottom:64px}
+.authLogoChip{display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:#fff;padding:6px}
+.authBrandName{font-size:19px;font-weight:800}
+.authHeadline{margin:0 0 14px;font-size:32px;font-weight:800;line-height:1.15}
+.authSub{margin:0 0 28px;color:#c6d6e6;font-size:14.5px}
+.authBenefits{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;font-size:14.5px;color:#eaf1f8}
+.authBenefits li{position:relative;padding-left:26px}
+.authBenefits li::before{content:"";position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.14)}
+.authBenefits li::after{content:"";position:absolute;left:4.5px;top:6.5px;width:7px;height:4px;border-left:2px solid #5fd089;border-bottom:2px solid #5fd089;transform:rotate(-45deg)}
+.authPanelFoot{margin-top:auto;padding-top:40px}
+.authTagline{font-size:12px;letter-spacing:1.5px;font-weight:700;color:#c08a3e}
+
+.authForm{display:flex;flex-direction:column;justify-content:center;padding:40px;max-width:440px;width:100%;margin:0 auto}
+.authBack{align-self:flex-start;background:none;border:none;padding:0;margin-bottom:28px;color:var(--blue);font-weight:700;font-size:14px}
+.authTabs{display:flex;background:#f0f3f6;border-radius:24px;padding:4px;margin-bottom:28px}
+.authTab{flex:1;padding:10px;border:none;background:none;border-radius:20px;font-weight:700;font-size:14px;color:var(--dim)}
+.authTab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(18,57,95,.12)}
+.authTitle{margin:0 0 6px;font-size:28px;font-weight:800}
+.authSubtitle{margin:0 0 24px;color:var(--dim);font-size:14px}
+.authForm input{width:100%;padding:12px 14px;border:1.5px solid var(--line-2);border-radius:10px;font-size:14.5px;margin-bottom:18px}
+.authForm .fieldLabel{margin:0 0 6px}
+.authPasswordRow{position:relative}
+.authPasswordRow input{padding-right:54px}
+.authShowBtn{position:absolute;right:12px;top:12px;background:none;border:none;padding:0;color:var(--dim);font-size:12px;font-weight:600}
+.authSwitch{text-align:center;margin-top:18px;font-size:13.5px;color:var(--dim)}
+.authLink{background:none;border:none;padding:0;color:var(--blue);font-weight:700;font-size:13.5px}
+
+@media (max-width:760px){
+  .authSplit{grid-template-columns:1fr}
+  .authPanel{padding:28px}
+  .authBrand{margin-bottom:28px}
+  .authBenefits{display:none}
+  .authPanelFoot{margin-top:18px;padding-top:0}
+  .authForm{padding:28px}
 }

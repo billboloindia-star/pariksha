@@ -1,3 +1,5 @@
+import Logo from "./Logo";
+
 interface Props {
   onLogin: () => void;
 }
@@ -7,7 +9,7 @@ export default function Marketing({ onLogin }: Props) {
     <div className="marketing">
       <header className="mktNav">
         <div className="brand">
-          <span className="brandMark">P</span>
+          <Logo size={52} />
           <div>
             <h1>Pariksha</h1>
             <p>Timed mock exams — any subject, any exam.</p>
