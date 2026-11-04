@@ -19,6 +19,7 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
   const [fileName, setFileName] = useState("");
   const [showPrompt, setShowPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [imageFiles, setImageFiles] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   function load(text: string) {
@@ -33,7 +34,23 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
       return;
     }
     setError("");
+    res.paper.questions.forEach((q) => {
+      if (!q.image || /^(https?:|data:)/.test(q.image)) return;
+      const match = imageFiles[q.image.toLowerCase()];
+      if (match) q.image = match;
+    });
     onLoaded(res.paper);
+  }
+
+  function onImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    files.forEach((f) => {
+      const rd = new FileReader();
+      rd.onload = () => {
+        setImageFiles((prev) => ({ ...prev, [f.name.toLowerCase()]: String(rd.result) }));
+      };
+      rd.readAsDataURL(f);
+    });
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -99,6 +116,14 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
           <p className="muted">A <code>.json</code> or <code>.yml</code> paper, built to the format in <code>paper_format.md</code>.</p>
           <input ref={fileRef} type="file" accept=".json,.yml,.yaml,.txt" onChange={onFile} />
           {fileName && <p className="muted small">selected: {fileName}</p>}
+
+          <label className="fieldLabel imageAttachLabel" htmlFor="images">
+            Attach diagram images (optional) — only needed if your paper references a filename
+          </label>
+          <input id="images" type="file" accept="image/*" multiple onChange={onImages} />
+          {Object.keys(imageFiles).length > 0 && (
+            <p className="muted small">attached: {Object.keys(imageFiles).join(", ")}</p>
+          )}
         </section>
 
         <section className="card">

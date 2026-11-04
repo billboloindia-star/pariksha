@@ -15,6 +15,7 @@ export interface RawQuestion {
   options?: (string | number)[];
   answer_index?: number;
   table?: TableSpec;
+  image?: string;
   solution?: string;
   explanation?: string;
 }
@@ -40,6 +41,7 @@ export interface Question {
   type: QType;
   text: string;
   table?: TableSpec;
+  image?: string;
   solution?: string;
   options?: string[];
   ans: number;

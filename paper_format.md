@@ -36,6 +36,7 @@ sections:                              # one or more; they group the questions a
 | `topic` | no | report grouping |
 | `solution` | no | one line, shown for wrong/skipped questions |
 | `table` | no | see below, for DI |
+| `image` | no | see below, for diagrams |
 
 **Multiple choice (`type: mc`)** — the candidate taps one option.
 
@@ -57,6 +58,18 @@ sections:                              # one or more; they group the questions a
 ```
 
 The first column is rendered left-aligned, the rest right-aligned.
+
+**Diagrams** (NEET, BDS/MDS, circuits, ray diagrams...) — any question can carry an image above it:
+
+```yaml
+        image: "data:image/png;base64,iVBORw0KG..."   # embedded directly, or:
+        image: "q5.png"                                 # a filename, attached separately in the app
+```
+
+If the AI converting your paper can see and output the actual image, ask it to embed it as a
+`data:` URI directly — zero extra steps. If it can't, use a short filename instead and attach the
+matching image file in the "Attach diagram images" box on the home screen; the app encodes it for
+you. The ready-to-copy prompt on the home screen already explains both paths.
 
 ---
 

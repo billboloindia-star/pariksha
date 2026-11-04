@@ -204,6 +204,16 @@ export default function Exam({ paper, onFinish }: Props) {
             </table>
           )}
 
+          {q.image && (
+            <img
+              key={q.id}
+              className="qImage"
+              src={q.image}
+              alt=""
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
+
           {q.type === "mc" ? (
             <div className="options">
               {q.options?.map((o, i) => (

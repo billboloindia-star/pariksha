@@ -34,6 +34,7 @@ function buildQuestion(raw: RawQuestion, section: string, index: number): Questi
     type: type as "num" | "mc",
     text,
     table: normaliseTable(raw.table),
+    image: raw.image ? String(raw.image).trim() || undefined : undefined,
     solution: raw.solution ? String(raw.solution) : raw.explanation ? String(raw.explanation) : undefined,
   };
 
