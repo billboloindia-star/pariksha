@@ -2,7 +2,7 @@ import { useState } from "react";
 import * as api from "../api";
 
 interface Props {
-  onDone: (session?: api.Session) => void;
+  onDone: (session: api.Session) => void;
 }
 
 export default function Login({ onDone }: Props) {
@@ -32,8 +32,8 @@ export default function Login({ onDone }: Props) {
         <div className="brand">
           <span className="brandMark">P</span>
           <div>
-            <h1>{mode === "login" ? "Log in" : "Create an account"}</h1>
-            <p>Keep your attempt history with you, on any device.</p>
+            <h1>{mode === "login" ? "Log in to Pariksha" : "Create your Pariksha account"}</h1>
+            <p>An account is required to start a mock test, so your history stays with you.</p>
           </div>
         </div>
       </header>
@@ -69,10 +69,6 @@ export default function Login({ onDone }: Props) {
             <button className="btn" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
               {mode === "login" ? "Need an account? Sign up" : "Have an account? Log in"}
             </button>
-          </div>
-
-          <div className="rowBtns">
-            <button className="btn" onClick={() => onDone()}>Continue without an account</button>
           </div>
         </section>
       </div>

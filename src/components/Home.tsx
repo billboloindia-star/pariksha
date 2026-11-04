@@ -7,11 +7,10 @@ import * as api from "../api";
 interface Props {
   onLoaded: (p: Paper) => void;
   session: api.Session | null;
-  onLogin: () => void;
   onLogout: () => void;
 }
 
-export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
+export default function Home({ onLoaded, session, onLogout }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
@@ -52,16 +51,10 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
             <p>Load a paper, write it in exam conditions, then read the analysis.</p>
           </div>
         </div>
-        {api.backendEnabled() && (
+        {api.backendEnabled() && session && (
           <div className="accountRow">
-            {session ? (
-              <>
-                <span className="muted small">Signed in as {session.email}</span>
-                <button className="btn" onClick={onLogout}>Log out</button>
-              </>
-            ) : (
-              <button className="btn" onClick={onLogin}>Log in / Sign up</button>
-            )}
+            <span className="muted small">Signed in as {session.email}</span>
+            <button className="btn" onClick={onLogout}>Log out</button>
           </div>
         )}
       </header>
@@ -94,7 +87,7 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
       {error && <pre className="error">{error}</pre>}
 
       <footer className="homeFoot">
-        <span>runs offline · nothing leaves this computer</span>
+        <span>free, always</span>
         <span>json or yaml</span>
       </footer>
     </div>

@@ -88,14 +88,7 @@ resources:
           - AttributeName: when
             KeyType: RANGE
 
-plugins:
-  - serverless-dotenv-plugin
-  - serverless-python-requirements
-
 custom:
-  dotenv:
-    exclude:
-      - AWS_REGION
   pythonRequirements:
     dockerizePip: true
     layer: true

@@ -12,10 +12,10 @@ import type { Paper } from "./types";
 type Phase = "home" | "login" | "syscheck" | "instructions" | "exam" | "report";
 
 export default function App() {
-  const [phase, setPhase] = useState<Phase>("home");
+  const [session, setSession] = useState<api.Session | null>(() => api.getSession());
+  const [phase, setPhase] = useState<Phase>(() => (api.backendEnabled() && !session ? "login" : "home"));
   const [paper, setPaper] = useState<Paper | null>(null);
   const [result, setResult] = useState<ExamResult | null>(null);
-  const [session, setSession] = useState<api.Session | null>(() => api.getSession());
 
   const onLoaded = useCallback((p: Paper) => {
     setPaper(p);
@@ -39,12 +39,15 @@ export default function App() {
         <Home
           onLoaded={onLoaded}
           session={session}
-          onLogin={() => setPhase("login")}
-          onLogout={() => { api.setSession(null); setSession(null); }}
+          onLogout={() => {
+            api.setSession(null);
+            setSession(null);
+            setPhase(api.backendEnabled() ? "login" : "home");
+          }}
         />
       )}
       {phase === "login" && (
-        <Login onDone={(s) => { if (s) setSession(s); setPhase("home"); }} />
+        <Login onDone={(s) => { setSession(s); setPhase("home"); }} />
       )}
       {phase === "syscheck" && paper && (
         <SystemCheck paper={paper} onBack={again} onProceed={() => setPhase("instructions")} />
