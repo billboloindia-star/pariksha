@@ -5,6 +5,7 @@ import demoPaper from "../../demo_paper.yml?raw";
 import demoPaperJee from "../../demo_paper_jee.yml?raw";
 import { aiConversionPrompt } from "../aiPrompt";
 import * as api from "../api";
+import Marketing from "./Marketing";
 
 interface Props {
   onLoaded: (p: Paper) => void;
@@ -79,6 +80,10 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
     }
   }
 
+  if (api.backendEnabled() && !session) {
+    return <Marketing onLogin={onLogin} />;
+  }
+
   return (
     <div className="home">
       <header className="homeHead">
@@ -89,26 +94,13 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
             <p>Load any exam's paper, write it in timed conditions, then read the analysis.</p>
           </div>
         </div>
-        {api.backendEnabled() && (
+        {api.backendEnabled() && session && (
           <div className="accountRow">
-            {session ? (
-              <>
-                <span className="muted small">Signed in as {session.email}</span>
-                <button className="btn" onClick={onLogout}>Log out</button>
-              </>
-            ) : (
-              <button className="btn primary" onClick={onLogin}>Log in / Sign up</button>
-            )}
+            <span className="muted small">Signed in as {session.email}</span>
+            <button className="btn" onClick={onLogout}>Log out</button>
           </div>
         )}
       </header>
-
-      {api.backendEnabled() && !session && (
-        <div className="loginHint">
-          <span>Log in or sign up to start a mock test — your history will follow your account.</span>
-          <button className="btn primary" onClick={onLogin}>Log in / Sign up</button>
-        </div>
-      )}
 
       <div className="homeGrid">
         <section className="card">
