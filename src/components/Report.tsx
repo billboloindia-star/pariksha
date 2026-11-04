@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AttemptRecord, ExamResult, Question } from "../types";
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
+import * as api from "../api";
 
 interface Props {
   result: ExamResult;
@@ -41,24 +42,35 @@ export default function Report({ result, onAgain }: Props) {
     return "Keep going: raise attempts first, then trim the seconds.";
   }, [net, total, avgSec, accuracy, attempted]);
 
-  useEffect(() => {
-    try {
-      const rec: AttemptRecord = {
-        when: Date.now(), title: paper.title, net: Number(net.toFixed(2)), total,
-        correct, wrong, skipped, secs: Math.round(elapsedSec),
-        accuracy: Number(accuracy.toFixed(1)),
-        avgSec: Number(avgSec.toFixed(1)),
-        byTopic: Object.fromEntries(Object.entries(byTopic).map(([k, t]) => [k, { ok: t.ok, att: t.att }])),
-        tabSwitches,
-      };
-      const prev = JSON.parse(localStorage.getItem(HKEY) || "[]") as AttemptRecord[];
-      localStorage.setItem(HKEY, JSON.stringify([rec, ...prev].slice(0, 10)));
-    } catch { /* storage may be blocked */ }
-  }, [paper.title, net, total, correct, wrong, skipped, elapsedSec, accuracy, avgSec, byTopic, tabSwitches]);
+  const [history, setHistory] = useState<AttemptRecord[]>([]);
 
-  const history = useMemo<AttemptRecord[]>(() => {
-    try { return JSON.parse(localStorage.getItem(HKEY) || "[]"); } catch { return []; }
-  }, [net]);
+  useEffect(() => {
+    const rec: AttemptRecord = {
+      when: Date.now(), title: paper.title, net: Number(net.toFixed(2)), total,
+      correct, wrong, skipped, secs: Math.round(elapsedSec),
+      accuracy: Number(accuracy.toFixed(1)),
+      avgSec: Number(avgSec.toFixed(1)),
+      byTopic: Object.fromEntries(Object.entries(byTopic).map(([k, t]) => [k, { ok: t.ok, att: t.att }])),
+      tabSwitches,
+    };
+
+    let local: AttemptRecord[] = [];
+    try {
+      const prev = JSON.parse(localStorage.getItem(HKEY) || "[]") as AttemptRecord[];
+      local = [rec, ...prev].slice(0, 10);
+      localStorage.setItem(HKEY, JSON.stringify(local));
+    } catch { /* storage may be blocked */ }
+    setHistory(local);
+
+    const session = api.getSession();
+    if (api.backendEnabled() && session) {
+      api
+        .saveAttempt(rec)
+        .then(() => api.fetchAttempts())
+        .then(setHistory)
+        .catch(() => { /* keep the local-only history already shown */ });
+    }
+  }, [paper.title, net, total, correct, wrong, skipped, elapsedSec, accuracy, avgSec, byTopic, tabSwitches]);
 
   const slowest = useMemo(
     () =>

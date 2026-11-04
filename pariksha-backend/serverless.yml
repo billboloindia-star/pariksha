@@ -1,0 +1,110 @@
+service: pariksha
+
+provider:
+  name: aws
+  profile: billbolo
+  runtime: python3.12
+  region: ap-south-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 15
+
+  environment:
+    STAGE: ${self:provider.stage}
+    USERS_TABLE: pariksha-users-${self:provider.stage}
+    ATTEMPTS_TABLE: pariksha-attempts-${self:provider.stage}
+    JWT_SECRET: ${env:JWT_SECRET}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:Query
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.ATTEMPTS_TABLE}
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:${aws:region}:${aws:accountId}:*
+
+package:
+  patterns:
+    - '!.venv/**'
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!README.md'
+    - 'src/**'
+
+functions:
+  app:
+    handler: src.main.handler
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+
+    AttemptsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ATTEMPTS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: when
+            AttributeType: N
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: when
+            KeyType: RANGE
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-python-requirements
+
+custom:
+  dotenv:
+    exclude:
+      - AWS_REGION
+  pythonRequirements:
+    dockerizePip: true
+    layer: true
+    slim: true
+    strip: true
+    useDownloadCache: true
+    useStaticCache: true
+    noDeploy:
+      - boto3
+      - botocore
+      - s3transfer
+      - jmespath

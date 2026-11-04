@@ -2,12 +2,16 @@ import { useRef, useState } from "react";
 import { parsePaper } from "../paper";
 import type { Paper } from "../types";
 import demoPaper from "../../demo_paper.yml?raw";
+import * as api from "../api";
 
 interface Props {
   onLoaded: (p: Paper) => void;
+  session: api.Session | null;
+  onLogin: () => void;
+  onLogout: () => void;
 }
 
-export default function Home({ onLoaded }: Props) {
+export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
@@ -44,10 +48,22 @@ export default function Home({ onLoaded }: Props) {
         <div className="brand">
           <span className="brandMark">RRB</span>
           <div>
-            <h1>Exam runner</h1>
+            <h1>Pariksha</h1>
             <p>Load a paper, write it in exam conditions, then read the analysis.</p>
           </div>
         </div>
+        {api.backendEnabled() && (
+          <div className="accountRow">
+            {session ? (
+              <>
+                <span className="muted small">Signed in as {session.email}</span>
+                <button className="btn" onClick={onLogout}>Log out</button>
+              </>
+            ) : (
+              <button className="btn" onClick={onLogin}>Log in / Sign up</button>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="homeGrid">
