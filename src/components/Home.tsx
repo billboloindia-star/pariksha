@@ -140,7 +140,7 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
       {error && <pre className="error">{error}</pre>}
 
       <footer className="homeFoot">
-        <span>free, always</span>
+        <span>Practise &middot; Perform &middot; Pass</span>
         <span>json or yaml</span>
       </footer>
     </div>
