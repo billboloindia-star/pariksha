@@ -3,14 +3,15 @@ import type { AiReview as AiReviewData, AttemptRecord, ExamResult, PerformanceIn
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
 import AiReview from "./AiReview";
+import ScoreDonut from "./ScoreDonut";
+import TopicBars from "./TopicBars";
 import * as api from "../api";
+import { HISTORY_KEY, loadLocalHistory } from "../history";
 
 interface Props {
   result: ExamResult;
   onAgain: () => void;
 }
-
-const HKEY = "exam_app_history";
 
 function fmt(s: number) {
   const t = Math.max(0, Math.round(s));
@@ -58,9 +59,8 @@ export default function Report({ result, onAgain }: Props) {
 
     let local: AttemptRecord[] = [];
     try {
-      const prev = JSON.parse(localStorage.getItem(HKEY) || "[]") as AttemptRecord[];
-      local = [rec, ...prev].slice(0, 10);
-      localStorage.setItem(HKEY, JSON.stringify(local));
+      local = [rec, ...loadLocalHistory()].slice(0, 10);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(local));
     } catch { /* storage may be blocked */ }
     setHistory(local);
 
@@ -169,10 +169,6 @@ export default function Report({ result, onAgain }: Props) {
     if (next !== undefined) setSelectedQ(next);
   }
 
-  const circumference = 2 * Math.PI * 85;
-  const correctLen = total ? (circumference * correct) / total : 0;
-  const wrongLen = total ? (circumference * wrong) / total : 0;
-
   async function requestAiReview() {
     setAiState("loading");
     const input: PerformanceInput = {
@@ -280,23 +276,7 @@ export default function Report({ result, onAgain }: Props) {
             <div className="ovGrid">
               <div className="ovCard ovDonutCard">
                 <span className="ovLabel">SCORE BREAKDOWN</span>
-                <div className="ovDonutRow">
-                  <svg viewBox="0 0 220 220" width="150" height="150">
-                    <circle cx="110" cy="110" r="85" fill="none" stroke="#e7ebef" strokeWidth="30" />
-                    <circle cx="110" cy="110" r="85" fill="none" stroke="var(--green)" strokeWidth="30"
-                      strokeDasharray={`${correctLen} ${circumference - correctLen}`} transform="rotate(-90 110 110)" />
-                    <circle cx="110" cy="110" r="85" fill="none" stroke="var(--red)" strokeWidth="30"
-                      strokeDasharray={`${wrongLen} ${circumference - wrongLen}`} strokeDashoffset={-correctLen}
-                      transform="rotate(-90 110 110)" />
-                    <text x="110" y="104" fontSize="28" fontWeight="800" fill="var(--ink)" textAnchor="middle">{net.toFixed(2)}</text>
-                    <text x="110" y="126" fontSize="12.5" fill="var(--dim)" textAnchor="middle">net / {total}</text>
-                  </svg>
-                  <div className="ovLegend">
-                    <div><i className="sw correct" />{correct} Correct<span>{total ? Math.round((correct / total) * 100) : 0}%</span></div>
-                    <div><i className="sw wrong" />{wrong} Wrong<span>{total ? Math.round((wrong / total) * 100) : 0}%</span></div>
-                    <div><i className="sw skipped" />{skipped} Skipped<span>{total ? Math.round((skipped / total) * 100) : 0}%</span></div>
-                  </div>
-                </div>
+                <ScoreDonut correct={correct} wrong={wrong} skipped={skipped} total={total} net={net} />
               </div>
 
               <div className="ovChip">
@@ -342,15 +322,7 @@ export default function Report({ result, onAgain }: Props) {
 
             <section className="repSection">
               <h3>Top topics by accuracy</h3>
-              {topicRows.filter((r) => r.acc !== null).slice(0, 5).map((r) => (
-                <div className="topicBarRow" key={r.topic}>
-                  <span className="topicBarName">{r.topic}</span>
-                  <div className="topicBarTrack">
-                    <div className="topicBarFill" style={{ width: `${r.acc}%`, background: r.acc! >= 80 ? "var(--green)" : r.acc! >= 40 ? "#e8962a" : "var(--red)" }} />
-                  </div>
-                  <span className="topicBarPct">{r.acc}%</span>
-                </div>
-              ))}
+              <TopicBars rows={topicRows.filter((r) => r.acc !== null).slice(0, 5)} />
               {topicRows.length > 5 && (
                 <button className="aiLinkBtn" onClick={() => setTab("topics")}>View all {topicRows.length} topics &rarr;</button>
               )}
@@ -362,18 +334,7 @@ export default function Report({ result, onAgain }: Props) {
           <section className="repSection">
             <h3>By topic</h3>
             <p className="muted small">Sorted by accuracy. Topics you haven&rsquo;t attempted sit at the bottom.</p>
-            {topicRows.map((r) => (
-              <div className={`topicBarRow ${r.acc === null ? "unattempted" : ""}`} key={r.topic}>
-                <div className="topicBarInfo">
-                  <span className="topicBarName">{r.topic}</span>
-                  <span className="muted small">{r.acc !== null ? `${r.ok}/${r.att} right${r.avgSec !== null ? ` · ${r.avgSec.toFixed(1)}s avg` : ""}` : `0/${r.n} attempted`}</span>
-                </div>
-                <div className="topicBarTrack">
-                  <div className="topicBarFill" style={{ width: `${r.acc ?? 2}%`, background: r.acc === null ? "var(--line-2)" : r.acc >= 80 ? "var(--green)" : r.acc >= 40 ? "#e8962a" : "var(--red)" }} />
-                </div>
-                <span className="topicBarPct">{r.acc !== null ? `${r.acc}%` : "not attempted"}</span>
-              </div>
-            ))}
+            <TopicBars rows={topicRows} full />
           </section>
         )}
 

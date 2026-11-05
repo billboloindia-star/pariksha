@@ -442,3 +442,15 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .miniCell.current{outline:2px solid var(--blue);outline-offset:1px}
 .reviewDetail{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px}
 .reviewDetailTop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+
+/* ---------- past attempts ---------- */
+.pastAttemptRow{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:14px 4px;border:none;border-bottom:1px solid var(--line);background:none;text-align:left;font-family:inherit}
+.pastAttemptRow:last-child{border-bottom:none}
+.pastAttemptRow:hover{background:var(--soft)}
+.pastAttemptInfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pastAttemptInfo b{font-size:14.5px}
+.pastAttemptStats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-weight:700;font-size:13.5px;flex:0 0 auto}
+@media (max-width:560px){
+  .pastAttemptRow{flex-wrap:wrap}
+  .pastAttemptStats{align-items:flex-start}
+}

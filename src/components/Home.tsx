@@ -13,9 +13,10 @@ interface Props {
   session: api.Session | null;
   onLogin: () => void;
   onLogout: () => void;
+  onPastAttempts: () => void;
 }
 
-export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
+export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttempts }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
@@ -95,12 +96,15 @@ export default function Home({ onLoaded, session, onLogin, onLogout }: Props) {
             <p>Load any exam's paper, write it in timed conditions, then read the analysis.</p>
           </div>
         </div>
-        {api.backendEnabled() && session && (
-          <div className="accountRow">
-            <span className="muted small">Signed in as {session.email}</span>
-            <button className="btn" onClick={onLogout}>Log out</button>
-          </div>
-        )}
+        <div className="accountRow">
+          <button className="btn" onClick={onPastAttempts}>Past attempts</button>
+          {api.backendEnabled() && session && (
+            <>
+              <span className="muted small">Signed in as {session.email}</span>
+              <button className="btn" onClick={onLogout}>Log out</button>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="homeGrid">

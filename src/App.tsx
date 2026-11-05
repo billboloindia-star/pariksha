@@ -6,11 +6,12 @@ import SystemCheck from "./components/SystemCheck";
 import Instructions from "./components/Instructions";
 import Exam from "./components/Exam";
 import Report from "./components/Report";
+import PastAttempts from "./components/PastAttempts";
 import * as api from "./api";
 import type { ExamResult } from "./types";
 import type { Paper } from "./types";
 
-type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report";
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past";
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
@@ -52,8 +53,10 @@ export default function App() {
             api.setSession(null);
             setSession(null);
           }}
+          onPastAttempts={() => setPhase("past")}
         />
       )}
+      {phase === "past" && <PastAttempts onBack={() => setPhase("home")} />}
       {phase === "login" && (
         <Login onDone={(s) => { setSession(s); setPhase("home"); }} onBack={() => setPhase("home")} />
       )}
