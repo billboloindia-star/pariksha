@@ -261,6 +261,8 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .marketing{color:var(--ink)}
 .mktNav,.mktHero,.mktFeatures,.mktHow{max-width:1160px;margin:0 auto;padding:0 24px}
 .mktNav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:34px;padding-bottom:28px;flex-wrap:wrap}
+.mktNavLogin{background:none;border:none;color:var(--blue);font-weight:700;padding:8px 6px}
+.mktNavLogin:hover{text-decoration:underline}
 
 .mktHero{display:flex;align-items:center;gap:48px;padding-top:12px;padding-bottom:56px;flex-wrap:wrap}
 .mktHeroText{flex:1 1 440px;min-width:0}
