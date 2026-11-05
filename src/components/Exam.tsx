@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useExam } from "../useExam";
 import * as api from "../api";
 import type { ExamResult, Paper, Status, TopicStat } from "../types";
+import type { ExamProgress } from "../examPersist";
 
 interface Props {
   paper: Paper;
   onFinish: (r: ExamResult) => void;
   monitorTabSwitches?: boolean;
+  initialProgress?: ExamProgress;
+  onDiscard?: () => void;
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -36,9 +39,9 @@ function candidateDisplayName(email: string): string {
     .join(" ");
 }
 
-export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Props) {
+export default function Exam({ paper, onFinish, monitorTabSwitches = true, initialProgress, onDiscard }: Props) {
   const noop = useRef(() => {});
-  const exam = useExam(paper, noop.current, monitorTabSwitches);
+  const exam = useExam(paper, noop.current, monitorTabSwitches, initialProgress);
   const session = api.getSession();
   const candidateName = session ? candidateDisplayName(session.email) : "Guest candidate";
   const candidateInitials = (session ? candidateName : "G").slice(0, 2).toUpperCase();
@@ -110,6 +113,7 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (exam.paused) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
       if (q.type === "mc" && /^[1-9]$/.test(e.key)) {
@@ -134,6 +138,10 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
           <span className="examSub">Question Paper</span>
         </div>
         <div className="examBarRight">
+          <button className="btn pauseBtn" onClick={exam.pause} disabled={exam.paused}>
+            <svg viewBox="0 0 24 24" width="15" height="15"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" /></svg>
+            Pause
+          </button>
           <div className={`clockBox ${exam.remaining < 120 ? "urgent" : ""}`}>
             <span className="clockLabel">
               {exam.sectionTimed && paper.sections[exam.sectionIdx]
@@ -322,6 +330,32 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
               <button className="btn" onClick={() => setConfirmOpen(false)}>Keep writing</button>
               <button className="btn primary" onClick={() => { setConfirmOpen(false); exam.submit(); }}>Submit now</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {exam.paused && (
+        <div className="modalWrap pauseWrap" role="dialog" aria-modal="true">
+          <div className="modal pauseModal">
+            <span className="pauseIcon">
+              <svg viewBox="0 0 24 24" width="26" height="26"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" /></svg>
+            </span>
+            <h3>{initialProgress ? "You left off here" : "Paused"}</h3>
+            <p className="muted">
+              {clock(exam.remaining)} left {exam.sectionTimed && paper.sections[exam.sectionIdx] ? `in ${paper.sections[exam.sectionIdx].name}` : ""} &middot; your answers are saved.
+            </p>
+            <button
+              className="btn primary wide"
+              onClick={() => {
+                exam.resume();
+                if (monitorTabSwitches) document.documentElement.requestFullscreen?.().catch(() => {});
+              }}
+            >
+              Resume
+            </button>
+            {onDiscard && (
+              <button className="btn linkBtn" onClick={onDiscard}>Discard &amp; choose a different paper</button>
+            )}
           </div>
         </div>
       )}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Paper, QState, Status } from "./types";
 import { statusOf } from "./types";
+import type { ExamProgress } from "./examPersist";
+import { clearInProgress, savePaper, saveProgress } from "./examPersist";
 
 export interface ExamApi {
   paper: Paper;
@@ -11,6 +13,9 @@ export interface ExamApi {
   sectionTimed: boolean;
   lockedSections: number[];
   finished: boolean;
+  paused: boolean;
+  pause: () => void;
+  resume: () => void;
   setIdx: (i: number) => void;
   setGiven: (i: number, v: number | null) => void;
   clear: (i: number) => void;
@@ -25,29 +30,48 @@ export interface ExamApi {
   tabSwitches: number;
 }
 
-export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches = true): ExamApi {
+export function useExam(
+  paper: Paper,
+  onFinish: () => void,
+  monitorTabSwitches = true,
+  initialProgress?: ExamProgress
+): ExamApi {
   const total = paper.questions.length;
   const sectionTimed = paper.sections.some((s) => typeof s.minutes === "number" && (s.minutes ?? 0) > 0);
 
-  const [idx, setIdxRaw] = useState(0);
-  const [sectionIdx, setSectionIdx] = useState(0);
-  const [lockedSections, setLockedSections] = useState<number[]>([]);
+  const [idx, setIdxRaw] = useState(initialProgress?.idx ?? 0);
+  const [sectionIdx, setSectionIdx] = useState(initialProgress?.sectionIdx ?? 0);
+  const [lockedSections, setLockedSections] = useState<number[]>(initialProgress?.lockedSections ?? []);
   const [finished, setFinished] = useState(false);
-  const [tabSwitches, setTabSwitches] = useState(0);
+  const [tabSwitches, setTabSwitches] = useState(initialProgress?.tabSwitches ?? 0);
   const [remaining, setRemaining] = useState(
-    sectionTimed ? (paper.sections[0]?.minutes ?? paper.durationMinutes) * 60 : paper.durationMinutes * 60
+    initialProgress?.remaining ??
+      (sectionTimed ? (paper.sections[0]?.minutes ?? paper.durationMinutes) * 60 : paper.durationMinutes * 60)
   );
-  const [states, setStates] = useState<QState[]>(() =>
-    Array.from({ length: total }, (_, i) => ({ given: null, marked: false, visited: i === 0, timeMs: 0 }))
+  const [states, setStates] = useState<QState[]>(
+    () =>
+      initialProgress?.states ??
+      Array.from({ length: total }, (_, i) => ({ given: null, marked: false, visited: i === 0, timeMs: 0 }))
   );
+  const [paused, setPaused] = useState(!!initialProgress);
 
   const startedAt = useRef(Date.now());
   const sectionStartedAt = useRef(Date.now());
   const visitStart = useRef(Date.now());
-  const idxRef = useRef(0);
-  const sectionRef = useRef(0);
-  const lockedRef = useRef<number[]>([]);
+  const idxRef = useRef(initialProgress?.idx ?? 0);
+  const sectionRef = useRef(initialProgress?.sectionIdx ?? 0);
+  const lockedRef = useRef<number[]>(initialProgress?.lockedSections ?? []);
   const finishedRef = useRef(false);
+  const pausedRef = useRef(!!initialProgress);
+  const pausedAt = useRef(Date.now());
+
+  // kept in sync so the unload/visibility save handler always reads the latest values
+  const statesRef = useRef(states);
+  const tabSwitchesRef = useRef(tabSwitches);
+  const remainingRef = useRef(remaining);
+  useEffect(() => { statesRef.current = states; }, [states]);
+  useEffect(() => { tabSwitchesRef.current = tabSwitches; }, [tabSwitches]);
+  useEffect(() => { remainingRef.current = remaining; }, [remaining]);
 
   const sectionOf = useCallback(
     (i: number) => {
@@ -61,6 +85,7 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
     if (finishedRef.current) return;
     finishedRef.current = true;
     setFinished(true);
+    clearInProgress();
     document.exitFullscreen?.().catch(() => {});
     onFinish();
   }, [onFinish]);
@@ -68,7 +93,7 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
   useEffect(() => {
     if (!monitorTabSwitches) return;
     const bump = () => {
-      if (!finishedRef.current) setTabSwitches((n) => n + 1);
+      if (!finishedRef.current && !pausedRef.current) setTabSwitches((n) => n + 1);
     };
     const onVisibility = () => { if (document.hidden) bump(); };
     const onFullscreenChange = () => { if (!document.fullscreenElement) bump(); };
@@ -93,7 +118,7 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
 
   useEffect(() => {
     const t = window.setInterval(() => {
-      if (finishedRef.current) return;
+      if (finishedRef.current || pausedRef.current) return;
       if (sectionTimed) {
         const sec = paper.sections[sectionRef.current];
         const limit = (sec?.minutes ?? paper.durationMinutes) * 60;
@@ -140,9 +165,27 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
     });
   }, []);
 
+  const pause = useCallback(() => {
+    if (finishedRef.current || pausedRef.current) return;
+    flushTime();
+    pausedRef.current = true;
+    pausedAt.current = Date.now();
+    setPaused(true);
+  }, [flushTime]);
+
+  const resume = useCallback(() => {
+    if (!pausedRef.current || finishedRef.current) return;
+    const delta = Date.now() - pausedAt.current;
+    startedAt.current += delta;
+    sectionStartedAt.current += delta;
+    visitStart.current = Date.now();
+    pausedRef.current = false;
+    setPaused(false);
+  }, []);
+
   const setIdx = useCallback(
     (i: number) => {
-      if (i < 0 || i >= total || finishedRef.current) return;
+      if (i < 0 || i >= total || finishedRef.current || pausedRef.current) return;
       const si = sectionOf(i);
       if (lockedRef.current.indexOf(si) >= 0) return;
       // Sectional timing is strict: only the current section is navigable. A
@@ -221,8 +264,48 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
     return c;
   }, [states]);
 
+  // write the (static) paper once, at the start of a fresh attempt only - a
+  // hydrated/resumed attempt already has it persisted.
+  useEffect(() => {
+    if (!initialProgress) savePaper({ paper, monitorTabSwitches });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // progress snapshot on any meaningful change - deliberately NOT keyed on
+  // `remaining`, which ticks 4x/sec; the unload/visibility handler below
+  // covers capturing a fresh `remaining` right before an actual exit.
+  useEffect(() => {
+    if (finishedRef.current) return;
+    saveProgress({ idx, states, sectionIdx, lockedSections, tabSwitches, remaining });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, states, sectionIdx, lockedSections, tabSwitches, paused]);
+
+  useEffect(() => {
+    function saveNow() {
+      if (finishedRef.current) return;
+      saveProgress({
+        idx: idxRef.current,
+        states: statesRef.current,
+        sectionIdx: sectionRef.current,
+        lockedSections: lockedRef.current,
+        tabSwitches: tabSwitchesRef.current,
+        remaining: remainingRef.current,
+      });
+    }
+    function onVisibility() { if (document.hidden) saveNow(); }
+    window.addEventListener("pagehide", saveNow);
+    window.addEventListener("beforeunload", saveNow);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", saveNow);
+      window.removeEventListener("beforeunload", saveNow);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
   return {
     paper, states, idx, remaining, sectionIdx, sectionTimed, lockedSections, finished,
+    paused, pause, resume,
     setIdx, setGiven, clear, toggleMark, saveAndNext, markAndNext, previous, submit,
     status, counts,
     elapsedSec: (Date.now() - startedAt.current) / 1000,

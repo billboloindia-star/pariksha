@@ -10,15 +10,19 @@ import PastAttempts from "./components/PastAttempts";
 import * as api from "./api";
 import type { ExamResult } from "./types";
 import type { Paper } from "./types";
+import { clearInProgress, loadInProgress } from "./examPersist";
+import type { ExamProgress } from "./examPersist";
 
 type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past";
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
-  const [phase, setPhase] = useState<Phase>("home");
-  const [paper, setPaper] = useState<Paper | null>(null);
+  const resumed = useState(() => loadInProgress())[0];
+  const [phase, setPhase] = useState<Phase>(resumed ? "exam" : "home");
+  const [paper, setPaper] = useState<Paper | null>(resumed?.paper ?? null);
   const [result, setResult] = useState<ExamResult | null>(null);
-  const [monitorTabSwitches, setMonitorTabSwitches] = useState(true);
+  const [monitorTabSwitches, setMonitorTabSwitches] = useState(resumed?.monitorTabSwitches ?? true);
+  const [initialProgress] = useState<ExamProgress | undefined>(resumed?.progress);
 
   const onLoaded = useCallback((p: Paper) => {
     setPaper(p);
@@ -69,7 +73,15 @@ export default function App() {
       {phase === "instructions" && paper && (
         <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} monitorTabSwitches={monitorTabSwitches} />
       )}
-      {phase === "exam" && paper && <Exam paper={paper} onFinish={onFinish} monitorTabSwitches={monitorTabSwitches} />}
+      {phase === "exam" && paper && (
+        <Exam
+          paper={paper}
+          onFinish={onFinish}
+          monitorTabSwitches={monitorTabSwitches}
+          initialProgress={initialProgress}
+          onDiscard={initialProgress ? () => { clearInProgress(); again(); } : undefined}
+        />
+      )}
       {phase === "report" && result && <Report result={result} onAgain={again} />}
     </div>
   );
