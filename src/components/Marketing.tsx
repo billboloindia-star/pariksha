@@ -15,7 +15,6 @@ export default function Marketing({ onLogin }: Props) {
             <p>Timed mock exams — any subject, any exam.</p>
           </div>
         </div>
-        <button className="btn mktNavLogin" onClick={onLogin}>Log in</button>
       </header>
 
       <section className="mktHero">
