@@ -17,7 +17,7 @@ export function initials(email: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase();
 }
 
-function computeStreak(whens: number[]): number {
+export function computeStreak(whens: number[]): number {
   if (whens.length === 0) return 0;
   const days = new Set(whens.map((w) => new Date(w).toDateString()));
   const cursor = new Date();

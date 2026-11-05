@@ -67,7 +67,7 @@ export default function App() {
       {showMarketing && <Marketing onLogin={() => setPhase("login")} />}
       {isHubPhase && !showMarketing && (
         <HubLayout active={phase as HubPhase} onNavigate={(p) => setPhase(p)} session={session} onLogout={onLogout}>
-          {phase === "home" && <Home onLoaded={onLoaded} session={session} onLogin={() => setPhase("login")} />}
+          {phase === "home" && <Home onLoaded={onLoaded} session={session} onLogin={() => setPhase("login")} onPastAttempts={() => setPhase("past")} />}
           {phase === "past" && <PastAttempts />}
           {phase === "library" && <Library onLoaded={onLoaded} />}
           {phase === "insights" && <Insights />}
