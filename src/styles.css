@@ -51,7 +51,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .homeFoot{display:flex;justify-content:space-between;margin-top:26px;color:var(--dim);font-size:12px}
 
 /* ---------- exam chrome ---------- */
-.examWrap{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.examWrap{height:100vh;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
 .report{min-height:100vh}
 .instr{min-height:100vh}
 .examBar{display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--navy);color:#fff;padding:10px 20px;flex-wrap:wrap}
@@ -75,7 +75,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .examBody{flex:1;display:grid;grid-template-columns:1fr 320px;gap:0;min-height:0}
 @media (max-width:900px){.examBody{grid-template-columns:1fr}}
 
-.qPanel{background:#fff;padding:22px 26px 26px;min-height:420px;display:flex;flex-direction:column}
+.qPanel{background:#fff;padding:22px 26px 26px;min-height:420px;display:flex;flex-direction:column;overflow-y:auto}
 .qTop{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px;font-size:13px;color:var(--dim)}
 .qNo b{color:var(--ink);font-size:15px}
 .marks b{color:var(--ink)}
@@ -111,7 +111,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .markBtn{border-color:var(--purple);color:var(--purple);background:#faf7ff}
 
 /* ---------- palette ---------- */
-.sidePanel{background:#f7f9fc;border-left:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:14px}
+.sidePanel{background:#f7f9fc;border-left:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
 @media (max-width:900px){.sidePanel{border-left:none;border-top:1px solid var(--line)}}
 .sideHead{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:700}
 .legend{display:flex;flex-direction:column;gap:6px;font-size:12px}

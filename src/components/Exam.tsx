@@ -59,6 +59,20 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
     [paper.sections, exam.idx]
   );
 
+  const paletteIndices = useMemo(() => {
+    if (exam.sectionTimed && activeSection) {
+      return Array.from({ length: activeSection.to - activeSection.from + 1 }, (_, k) => activeSection.from + k);
+    }
+    return paper.questions.map((_, i) => i);
+  }, [exam.sectionTimed, activeSection, paper.questions]);
+
+  const paletteCounts = useMemo(() => {
+    if (!exam.sectionTimed || !activeSection) return exam.counts;
+    const c: Record<Status, number> = { notVisited: 0, notAnswered: 0, answered: 0, marked: 0, answeredMarked: 0 };
+    for (const i of paletteIndices) c[exam.status(i)] += 1;
+    return c;
+  }, [exam.sectionTimed, activeSection, paletteIndices, exam.counts, exam.status]);
+
   useEffect(() => {
     if (!exam.finished || doneRef.current) return;
     doneRef.current = true;
@@ -257,20 +271,23 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
         </main>
 
         <aside className="sidePanel">
-          <div className="sideHead">Question Palette</div>
+          <div className="sideHead">
+            Question Palette
+            {exam.sectionTimed && activeSection && <span className="muted small"> &middot; {activeSection.name}</span>}
+          </div>
 
           <div className="legend">
             {(Object.keys(STATUS_LABEL) as Status[]).map((k) => (
               <div className="legendRow" key={k}>
                 <i className={`sw ${k}`} />
                 <span>{STATUS_LABEL[k]}</span>
-                <b>{exam.counts[k]}</b>
+                <b>{paletteCounts[k]}</b>
               </div>
             ))}
           </div>
 
           <div className="palette">
-            {paper.questions.map((_, i) => {
+            {paletteIndices.map((i) => {
               const secOf = paper.sections.findIndex((sec) => i >= sec.from && i <= sec.to);
               const locked = exam.lockedSections.indexOf(secOf) >= 0 || (exam.sectionTimed && secOf !== exam.sectionIdx);
               return (
