@@ -41,6 +41,14 @@ function parseScalar(v: string): unknown {
   return s;
 }
 
+/* Block-scalar indicator: "|" (literal, keeps line breaks) or ">" (folded,
+   joins lines with spaces), with an optional chomping flag (-/+) and/or an
+   explicit indent digit, e.g. "|-", ">+", "|2". Common for multi-line
+   question text (seating-arrangement puzzles, passages). */
+function blockScalarStyle(val: string): "|" | ">" | null {
+  return /^[|>][+-]?\d*$/.test(val) ? (val[0] as "|" | ">") : null;
+}
+
 export function parseYaml(src: string): unknown {
   const raw = src.replace(/\r/g, "").split("\n");
   const lines: Line[] = [];
@@ -51,17 +59,31 @@ export function parseYaml(src: string): unknown {
   }
   let pos = 0;
 
+  function parseBlockScalar(style: "|" | ">", indent: number): string {
+    const collected: string[] = [];
+    while (pos < lines.length && lines[pos].ind > indent) {
+      collected.push(lines[pos].text);
+      pos++;
+    }
+    return collected.join(style === "|" ? "\n" : " ");
+  }
+
+  function resolveValue(val: string, indent: number): unknown {
+    const style = blockScalarStyle(val);
+    if (style) return parseBlockScalar(style, indent);
+    if (val === "") {
+      return pos < lines.length && lines[pos].ind > indent ? parseBlock(lines[pos].ind) : null;
+    }
+    return parseScalar(val);
+  }
+
   function putKV(obj: Record<string, unknown>, text: string, indent: number): void {
     const idx = text.indexOf(":");
     if (idx < 0) { pos++; return; }
     const key = text.slice(0, idx).trim().replace(/^["']|["']$/g, "");
     const val = text.slice(idx + 1).trim();
     pos++;
-    if (val === "") {
-      obj[key] = pos < lines.length && lines[pos].ind > indent ? parseBlock(lines[pos].ind) : null;
-    } else {
-      obj[key] = parseScalar(val);
-    }
+    obj[key] = resolveValue(val, indent);
   }
 
   function parseBlock(indent: number): unknown {
@@ -85,11 +107,7 @@ export function parseYaml(src: string): unknown {
           const ci = rest.indexOf(":");
           const k0 = rest.slice(0, ci).trim().replace(/^["']|["']$/g, "");
           const v0 = rest.slice(ci + 1).trim();
-          if (v0 === "") {
-            obj[k0] = pos < lines.length && lines[pos].ind > indent ? parseBlock(lines[pos].ind) : null;
-          } else {
-            obj[k0] = parseScalar(v0);
-          }
+          obj[k0] = resolveValue(v0, indent);
           while (pos < lines.length && lines[pos].ind > indent && lines[pos].text.slice(0, 2) !== "- ") {
             putKV(obj, lines[pos].text, lines[pos].ind);
           }
