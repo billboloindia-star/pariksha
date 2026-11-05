@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import * as api from "../api";
 import Logo from "./Logo";
 
@@ -17,20 +17,33 @@ export function initials(email: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase();
 }
 
+function computeStreak(whens: number[]): number {
+  if (whens.length === 0) return 0;
+  const days = new Set(whens.map((w) => new Date(w).toDateString()));
+  const cursor = new Date();
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (days.has(cursor.toDateString())) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 export function HomeIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 export function PastIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M12 9v4l3 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M12 9v4l3 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
 export function VaultIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
 export function InsightsIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-7M4 19h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-7M4 19h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 export function LogoutIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M13 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M13 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
 export function hubItems(): { phase: HubPhase; label: string; icon: ReactElement }[] {
@@ -44,15 +57,37 @@ export function hubItems(): { phase: HubPhase; label: string; icon: ReactElement
 
 export default function Sidebar({ active, onNavigate, session, onLogout }: Props) {
   const items = hubItems();
+  const [streak, setStreak] = useState<number | null>(null);
+  const [vaultCount, setVaultCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!api.backendEnabled() || !session) return;
+    api.fetchAttempts().then((a) => setStreak(computeStreak(a.map((r) => r.when)))).catch(() => {});
+    api.fetchLibrary().then((items) => setVaultCount(items.length)).catch(() => {});
+  }, [session]);
 
   return (
     <aside className="sidebar">
       <div className="sidebarInner">
         <div className="sidebarBrand">
-          <Logo size={36} />
-          <span className="sidebarBrandLabel">Pariksha</span>
+          <span className="sidebarLogo"><Logo size={32} /></span>
+          <div className="sidebarBrandText">
+            <b>Pariksha</b>
+            <span>Mock exam practice</span>
+          </div>
         </div>
 
+        {streak !== null && streak > 0 && (
+          <div className="sidebarStreak">
+            <span className="sidebarStreakIcon">&#128293;</span>
+            <div className="sidebarStreakText">
+              <b>{streak}-day streak</b>
+              <span>Keep it going today</span>
+            </div>
+          </div>
+        )}
+
+        <div className="sidebarSectionLabel">Menu</div>
         <nav className="sidebarNav">
           {items.map((it) => (
             <button
@@ -61,11 +96,21 @@ export default function Sidebar({ active, onNavigate, session, onLogout }: Props
               onClick={(e) => { onNavigate(it.phase); e.currentTarget.blur(); }}
               title={it.label}
             >
-              {it.icon}
+              <span className="sidebarIconChip">{it.icon}</span>
               <span className="sidebarItemLabel">{it.label}</span>
+              {it.phase === "library" && !!vaultCount && (
+                <span className="sidebarItemBadge">{vaultCount}</span>
+              )}
             </button>
           ))}
         </nav>
+
+        <div className="sidebarPromo">
+          <div className="sidebarPromoIcon">&#10024;</div>
+          <b>Try AI review</b>
+          <p>Get a personalized breakdown of your weak areas after your next mock.</p>
+          <button onClick={() => onNavigate("past")}>Learn more</button>
+        </div>
 
         {api.backendEnabled() && session && (
           <div className="sidebarFoot">
@@ -75,7 +120,6 @@ export default function Sidebar({ active, onNavigate, session, onLogout }: Props
             </div>
             <button className="sidebarItem sidebarLogout" onClick={(e) => { onLogout(); e.currentTarget.blur(); }} title="Log out">
               <LogoutIcon />
-              <span className="sidebarItemLabel">Log out</span>
             </button>
           </div>
         )}
