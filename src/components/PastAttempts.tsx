@@ -8,9 +8,6 @@ import AiReview from "./AiReview";
 import Logo from "./Logo";
 import * as api from "../api";
 
-interface Props {
-  onBack: () => void;
-}
 
 function fmt(s: number) {
   const t = Math.max(0, Math.round(s));
@@ -19,7 +16,7 @@ function fmt(s: number) {
   return `${m}:${String(r).padStart(2, "0")}`;
 }
 
-export default function PastAttempts({ onBack }: Props) {
+export default function PastAttempts() {
   const [history, setHistory] = useState<AttemptRecord[] | null>(null);
   const [selected, setSelected] = useState<AttemptRecord | null>(null);
 
@@ -144,16 +141,10 @@ export default function PastAttempts({ onBack }: Props) {
 
   return (
     <div className="home">
-      <header className="homeHead">
-        <div className="brand">
-          <Logo size={52} />
-          <div>
-            <h1>Past attempts</h1>
-            <p>Every mock test you&rsquo;ve submitted, with its score and topic breakdown.</p>
-          </div>
-        </div>
-        <button className="btn" onClick={onBack}>&larr; Back to Pariksha</button>
-      </header>
+      <div className="hubPageHead">
+        <h1>Past attempts</h1>
+        <p>Every mock test you&rsquo;ve submitted, with its score and topic breakdown.</p>
+      </div>
 
       {history === null && <p className="muted">Loading&hellip;</p>}
 

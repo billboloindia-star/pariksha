@@ -30,30 +30,94 @@ export default function Marketing({ onLogin }: Props) {
         </div>
 
         <div className="mktPreview" aria-hidden="true">
-          <div className="mktPreviewBar">
-            <span>JEE Mock 04 — Physics</span>
-            <span className="mktPreviewClock">18:42</span>
-          </div>
-          <div className="mktPreviewBody">
-            <div className="mktSkeletonLine" style={{ width: "88%" }} />
-            <div className="mktSkeletonLine" style={{ width: "70%" }} />
-            <div className="mktPreviewRow">
-              <div className="mktPreviewOptions">
-                <div className="mktPreviewOpt sel">A &nbsp; 10 m/s</div>
-                <div className="mktPreviewOpt">B &nbsp; 15 m/s</div>
+          <div className="mktPreviewStage">
+            <div className="mktPreviewFrame frame1">
+              <div className="mktPreviewBar">
+                <span>JEE Mock 04 — Physics</span>
+                <span className="mktPreviewClock">18:42</span>
               </div>
-              <div className="mktPreviewPalette">
-                <i className="answered" /><i className="answered" /><i className="notAnswered" /><i className="notVisited" />
-                <i className="marked" /><i className="notVisited" /><i className="answered" /><i className="notVisited" />
+              <div className="mktPreviewBody">
+                <div className="mktSkeletonLine" style={{ width: "88%" }} />
+                <div className="mktSkeletonLine" style={{ width: "70%" }} />
+                <div className="mktPreviewRow">
+                  <div className="mktPreviewOptions">
+                    <div className="mktPreviewOpt sel">A &nbsp; 10 m/s</div>
+                    <div className="mktPreviewOpt">B &nbsp; 15 m/s</div>
+                  </div>
+                  <div className="mktPreviewPalette">
+                    <i className="answered" /><i className="answered" /><i className="notAnswered" /><i className="notVisited" />
+                    <i className="marked" /><i className="notVisited" /><i className="answered" /><i className="notVisited" />
+                  </div>
+                </div>
+                <div className="mktPreviewChart">
+                  <svg viewBox="0 0 280 40" preserveAspectRatio="none">
+                    <polyline points="4,32 40,24 76,28 112,16 148,20 184,6 220,10" fill="none" stroke="var(--blue)" strokeWidth="2.5" />
+                  </svg>
+                  <div>
+                    <span className="muted small">Net score</span>
+                    <b>trending up</b>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="mktPreviewChart">
-              <svg viewBox="0 0 280 40" preserveAspectRatio="none">
-                <polyline points="4,32 40,24 76,28 112,16 148,20 184,6 220,10" fill="none" stroke="var(--blue)" strokeWidth="2.5" />
-              </svg>
-              <div>
-                <span className="muted small">Net score</span>
-                <b>trending up</b>
+
+            <div className="mktPreviewFrame frame2">
+              <div className="mktPreviewBar urgent">
+                <span>Reasoning Ability</span>
+                <span className="mktPreviewClock urgent">00:47</span>
+              </div>
+              <div className="mktPreviewBody">
+                <div className="mktLockBanner">
+                  <svg width="15" height="15" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg>
+                  Section locks at zero &mdash; moving on automatically
+                </div>
+                <div className="mktPreviewRow">
+                  <div className="mktSectionTabs">
+                    <span className="done">Reasoning</span>
+                    <span className="current">Quant</span>
+                    <span className="todo">English</span>
+                  </div>
+                  <div className="mktPreviewPalette">
+                    <i className="answered" /><i className="answered" /><i className="answered" /><i className="notAnswered" />
+                    <i className="answered" /><i className="marked" /><i className="answered" /><i className="notAnswered" />
+                  </div>
+                </div>
+                <div className="mktPreviewChart">
+                  <svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="9" fill="none" stroke="#e7ebef" strokeWidth="4" /><circle cx="12" cy="12" r="9" fill="none" stroke="var(--red-bg)" strokeWidth="4" strokeDasharray="18 38" strokeLinecap="round" transform="rotate(-90 12 12)" /></svg>
+                  <div>
+                    <span className="muted small">Tab switches</span>
+                    <b>flagged &amp; logged</b>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mktPreviewFrame frame3">
+              <div className="mktPreviewBar">
+                <span>Performance analysis</span>
+                <span className="mktPreviewClock">Done</span>
+              </div>
+              <div className="mktPreviewBody">
+                <div className="mktPreviewRow mktReportRow">
+                  <svg viewBox="0 0 24 24" width="54" height="54">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="#e7ebef" strokeWidth="3.4" />
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="var(--green-bg)" strokeWidth="3.4" strokeDasharray="42 56.5" strokeLinecap="round" transform="rotate(-90 12 12)" />
+                    <text x="12" y="15" fontSize="7" fontWeight="800" fill="var(--ink)" textAnchor="middle">74%</text>
+                  </svg>
+                  <div className="mktReportStats">
+                    <div><span className="muted small">Accuracy</span><b>74%</b></div>
+                    <div><span className="muted small">Avg / Q</span><b>38.2s</b></div>
+                  </div>
+                </div>
+                <div className="mktPreviewChart">
+                  <svg viewBox="0 0 280 40" preserveAspectRatio="none">
+                    <polyline points="4,30 40,26 76,30 112,18 148,22 184,10 220,14 256,4" fill="none" stroke="var(--green-bg)" strokeWidth="2.5" />
+                  </svg>
+                  <div>
+                    <span className="muted small">Net score</span>
+                    <b>trending up</b>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

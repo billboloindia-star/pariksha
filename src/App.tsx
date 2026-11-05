@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
 import Home from "./components/Home";
 import Login from "./components/Login";
+import Marketing from "./components/Marketing";
+import HubLayout from "./components/HubLayout";
+import type { HubPhase } from "./components/Sidebar";
 import Review from "./components/Review";
 import SystemCheck from "./components/SystemCheck";
 import Instructions from "./components/Instructions";
@@ -15,6 +18,7 @@ import { clearInProgress, loadInProgress } from "./examPersist";
 import type { ExamProgress } from "./examPersist";
 
 type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library";
+const HUB_PHASES: Phase[] = ["home", "past", "library"];
 
 const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false };
 
@@ -49,23 +53,24 @@ export default function App() {
     setPhase("home");
   }, []);
 
+  const onLogout = useCallback(() => {
+    api.setSession(null);
+    setSession(null);
+  }, []);
+
+  const isHubPhase = HUB_PHASES.includes(phase);
+  const showMarketing = isHubPhase && api.backendEnabled() && !session;
+
   return (
     <div className="app">
-      {phase === "home" && (
-        <Home
-          onLoaded={onLoaded}
-          session={session}
-          onLogin={() => setPhase("login")}
-          onLogout={() => {
-            api.setSession(null);
-            setSession(null);
-          }}
-          onPastAttempts={() => setPhase("past")}
-          onLibrary={() => setPhase("library")}
-        />
+      {showMarketing && <Marketing onLogin={() => setPhase("login")} />}
+      {isHubPhase && !showMarketing && (
+        <HubLayout active={phase as HubPhase} onNavigate={(p) => setPhase(p)} session={session} onLogout={onLogout}>
+          {phase === "home" && <Home onLoaded={onLoaded} session={session} onLogin={() => setPhase("login")} />}
+          {phase === "past" && <PastAttempts />}
+          {phase === "library" && <Library onLoaded={onLoaded} />}
+        </HubLayout>
       )}
-      {phase === "past" && <PastAttempts onBack={() => setPhase("home")} />}
-      {phase === "library" && <Library onLoaded={onLoaded} onBack={() => setPhase("home")} />}
       {phase === "login" && (
         <Login onDone={(s) => { setSession(s); setPhase("home"); }} onBack={() => setPhase("home")} />
       )}

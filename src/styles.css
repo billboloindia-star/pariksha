@@ -31,11 +31,45 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 
 /* ---------- home ---------- */
 .home{max-width:1000px;margin:0 auto;padding:34px 20px 60px}
+
+/* ---------- sidebar / hub layout ---------- */
+.hubShell{display:flex;min-height:100vh;align-items:stretch}
+.hubContent{flex:1;min-width:0}
+.sidebar{width:220px;flex:0 0 auto;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--line);padding:18px 14px;position:sticky;top:0;height:100vh;transition:width .18s ease}
+.sidebar.collapsed{width:72px}
+.sidebarBrand{display:flex;align-items:center;gap:10px;padding:4px 6px 20px;overflow:hidden}
+.sidebarBrandLabel{font-weight:800;font-size:16px;letter-spacing:-.2px;white-space:nowrap}
+.sidebar.collapsed .sidebarItemLabel,.sidebar.collapsed .sidebarBrandLabel{display:none}
+.sidebarNav{display:flex;flex-direction:column;gap:4px;flex:1}
+.sidebarItem{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:none;background:none;color:var(--ink);font-weight:700;font-size:13.5px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
+.sidebarItem:hover{background:var(--soft)}
+.sidebarItem.active{background:#e7eff7;color:var(--navy)}
+.sidebarItem svg{flex:0 0 auto;color:var(--dim)}
+.sidebarItem.active svg{color:var(--blue)}
+.sidebarCollapseBtn{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--dim);font-weight:700;font-size:12.5px;cursor:pointer;margin:10px 0;white-space:nowrap;overflow:hidden}
+.sidebarCollapseBtn:hover{background:var(--soft)}
+.sidebarFoot{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:4px}
+.sidebarAcct{display:flex;align-items:center;gap:10px;padding:8px 12px}
+.sidebarAcct .acctAvatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,var(--blue),var(--navy-2));color:#fff;display:grid;place-items:center;font-size:10.5px;font-weight:800;flex:0 0 auto}
+.sidebarAcct .sidebarItemLabel{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
+.sidebarLogout{color:#c0392b}
+.sidebarLogout svg{color:#c0392b}
+
+@media (max-width:760px){
+  .sidebar{width:72px!important}
+  .sidebar .sidebarItemLabel,.sidebar .sidebarBrandLabel{display:none}
+  .sidebarBrand{justify-content:center;padding:4px 0 16px}
+  .sidebarItem,.sidebarCollapseBtn{justify-content:center}
+  .sidebarAcct{justify-content:center;padding:8px 0}
+}
 .homeHead{margin-bottom:26px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(255,255,255,.8);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:15px 22px;box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 24px 50px -28px rgba(19,31,54,.28)}
 .accountRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .brand{display:flex;gap:16px;align-items:center}
 .brand h1{margin:0;font-size:26px;letter-spacing:-.4px}
 .brand p{margin:2px 0 0;color:var(--dim);font-size:14px}
+.hubPageHead{margin-bottom:26px}
+.hubPageHead h1{margin:0;font-size:26px;letter-spacing:-.4px}
+.hubPageHead p{margin:4px 0 0;color:var(--dim);font-size:14px}
 .homeGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 
 .pastBtn{display:flex;align-items:center;gap:8px;padding:10px 17px;border-radius:999px;border:1px solid var(--line-2);background:linear-gradient(180deg,#fff,#f7f9fc);font-weight:700;font-size:13.5px;color:var(--ink);cursor:pointer}
@@ -382,6 +416,36 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .mktPreviewChart svg{width:140px;height:32px;flex:0 0 auto}
 .mktPreviewChart div{display:flex;flex-direction:column}
 .mktPreviewChart b{font-size:13px}
+
+/* ---- animated preview (3 cross-fading frames) ---- */
+.mktPreviewStage{position:relative;min-height:242px}
+.mktPreviewFrame{position:absolute;inset:0;opacity:0;animation:mktFrameCycle 12s infinite;display:flex;flex-direction:column}
+.mktPreviewFrame .mktPreviewBody{flex:1}
+.mktPreviewFrame.frame1{animation-delay:0s}
+.mktPreviewFrame.frame2{animation-delay:4s}
+.mktPreviewFrame.frame3{animation-delay:8s}
+@keyframes mktFrameCycle{
+  0%{opacity:0}
+  11%,33%{opacity:1}
+  44%,100%{opacity:0}
+}
+@media (prefers-reduced-motion: reduce){
+  .mktPreviewFrame{animation:none;opacity:0}
+  .mktPreviewFrame.frame1{opacity:1}
+}
+
+.mktPreviewBar.urgent{background:#7a2a20}
+.mktPreviewClock.urgent{background:#9c3a2c;color:#fff}
+.mktLockBanner{display:flex;align-items:center;gap:8px;background:#fdf3e4;color:#a86a1a;border:1px solid #f3dfb8;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:700;margin-bottom:12px}
+.mktSectionTabs{display:flex;flex-direction:column;gap:6px;flex:1}
+.mktSectionTabs span{font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:7px}
+.mktSectionTabs .done{background:#e9f6ef;color:var(--green);text-decoration:line-through;opacity:.7}
+.mktSectionTabs .current{background:#eaf3fc;color:var(--blue)}
+.mktSectionTabs .todo{background:var(--soft);color:var(--dim)}
+.mktReportRow{align-items:center}
+.mktReportStats{display:flex;gap:18px}
+.mktReportStats span{display:block}
+.mktReportStats b{font-size:14px}
 
 .mktFeatures{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;padding-bottom:56px}
 .mktFeature h3{margin:14px 0 6px;font-size:16.5px}

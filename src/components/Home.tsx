@@ -6,22 +6,11 @@ import demoPaperJee from "../../demo_paper_jee.yml?raw";
 import { aiConversionPrompt } from "../aiPrompt";
 import * as api from "../api";
 import { loadHistory } from "../history";
-import Marketing from "./Marketing";
-import Logo from "./Logo";
 
 interface Props {
   onLoaded: (p: Paper) => void;
   session: api.Session | null;
   onLogin: () => void;
-  onLogout: () => void;
-  onPastAttempts: () => void;
-  onLibrary: () => void;
-}
-
-function initials(email: string): string {
-  const local = email.split("@")[0] ?? email;
-  const parts = local.replace(/[._-]+/g, " ").split(" ").filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase();
 }
 
 function stats(history: AttemptRecord[]) {
@@ -32,7 +21,7 @@ function stats(history: AttemptRecord[]) {
   return { attempts, bestAccuracy, exams };
 }
 
-export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttempts, onLibrary }: Props) {
+export default function Home({ onLoaded, session, onLogin }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
@@ -103,45 +92,10 @@ export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttem
     }
   }
 
-  if (api.backendEnabled() && !session) {
-    return <Marketing onLogin={onLogin} />;
-  }
-
   const { attempts, bestAccuracy, exams } = stats(history ?? []);
 
   return (
     <div className="home">
-      <header className="homeHead">
-        <div className="brand">
-          <Logo size={52} />
-          <div>
-            <h1>Pariksha</h1>
-            <p>Load any exam's paper, write it in timed conditions, then read the analysis.</p>
-          </div>
-        </div>
-        <div className="accountRow">
-          <button className="pastBtn" onClick={onPastAttempts}>
-            <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 9v4l3 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-            Past attempts
-          </button>
-          {api.backendEnabled() && (
-            <button className="pastBtn" onClick={onLibrary}>
-              <svg width="15" height="15" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-              Paper vault
-            </button>
-          )}
-          {api.backendEnabled() && session && (
-            <>
-              <div className="acctPill">
-                <span className="acctAvatar">{initials(session.email)}</span>
-                <span>{session.email}</span>
-              </div>
-              <button className="logoutBtn" onClick={onLogout}>Log out</button>
-            </>
-          )}
-        </div>
-      </header>
-
       <div className="heroStrip">
         <div>
           <h1>Start a new<br /><em>mock test</em></h1>

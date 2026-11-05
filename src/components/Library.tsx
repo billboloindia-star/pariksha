@@ -3,11 +3,9 @@ import type { LibraryFileLink, LibraryItem, Paper } from "../types";
 import { parsePaper } from "../paper";
 import { aiConversionPrompt } from "../aiPrompt";
 import * as api from "../api";
-import Logo from "./Logo";
 
 interface Props {
   onLoaded: (p: Paper) => void;
-  onBack: () => void;
 }
 
 function readAsBase64(file: File): Promise<string> {
@@ -44,7 +42,7 @@ function FileTypeIcon({ fileType }: { fileType: string }) {
   );
 }
 
-export default function Library({ onLoaded, onBack }: Props) {
+export default function Library({ onLoaded }: Props) {
   const [items, setItems] = useState<LibraryItem[] | null>(null);
   const [selected, setSelected] = useState<LibraryItem | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -258,17 +256,6 @@ export default function Library({ onLoaded, onBack }: Props) {
 
   return (
     <div className="home">
-      <header className="homeHead">
-        <div className="brand">
-          <Logo size={52} />
-          <div>
-            <h1>Paper vault</h1>
-            <p>Your source files, converted once, reusable forever.</p>
-          </div>
-        </div>
-        <button className="btn" onClick={onBack}>&larr; Back to Pariksha</button>
-      </header>
-
       <div className="vaultHero">
         <span className="vaultHeroIcon">
           <svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="#fff" strokeWidth="2" /><path d="M8 8h8M8 12h8M8 16h5" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
