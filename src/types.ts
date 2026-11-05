@@ -196,4 +196,8 @@ export interface ExamSettings {
   /** Replaces the cursor with one that eases toward the real pointer with a lag,
    * for practicing precise clicks on a sluggish exam-center mouse. */
   simulateLaggyCursor: boolean;
+  /** Swaps the instructions + exam screens for a look-alike of the real IBPS/TCS
+   * iON test portal (paginated instructions, status-legend colors, radio options,
+   * candidate photo panel, keyboard-lock warning) instead of Pariksha's own skin. */
+  examCenterSkin: boolean;
 }

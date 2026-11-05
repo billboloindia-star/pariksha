@@ -41,7 +41,7 @@ function candidateDisplayName(email: string): string {
 }
 
 export default function Exam({ paper, onFinish, settings, initialProgress, onDiscard }: Props) {
-  const { monitorTabSwitches, simulateZoom, simulateLaggyCursor } = settings;
+  const { monitorTabSwitches, simulateZoom, simulateLaggyCursor, examCenterSkin: ibps } = settings;
   const noop = useRef(() => {});
   const exam = useExam(paper, noop.current, settings, initialProgress);
   const session = api.getSession();
@@ -52,6 +52,7 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
   const [draft, setDraft] = useState<string>("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dismissedSwitches, setDismissedSwitches] = useState(0);
+  const [keyLock, setKeyLock] = useState(false);
   const doneRef = useRef(false);
 
   // keep the typed box in sync with the stored answer
@@ -121,6 +122,13 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
       if (exam.paused) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      // the real exam portal has no keyboard shortcuts at all - pressing anything
+      // outside an input just shows the "this will lock the exam" warning
+      if (ibps) {
+        e.preventDefault();
+        setKeyLock(true);
+        return;
+      }
       if (q.type === "mc" && /^[1-9]$/.test(e.key)) {
         const pick = Number(e.key) - 1;
         if (pick < (q.options?.length ?? 0)) {
@@ -133,14 +141,20 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [q, exam]);
+  }, [q, exam, ibps]);
+
+  useEffect(() => {
+    if (!keyLock) return;
+    const t = setTimeout(() => setKeyLock(false), 2400);
+    return () => clearTimeout(t);
+  }, [keyLock]);
 
   const examUi = (
-    <div className={`examWrap ${simulateLaggyCursor ? "laggyCursorActive" : ""}`}>
+    <div className={`examWrap ${simulateLaggyCursor ? "laggyCursorActive" : ""} ${ibps ? "ibpsSkin" : ""}`}>
       <header className="examBar">
         <div className="examBarLeft">
           <span className="examTitle">{paper.title}</span>
-          <span className="examSub">Question Paper</span>
+          <span className="examSub">{ibps ? "New IBPS Test" : "Question Paper"}</span>
         </div>
         <div className="examBarRight">
           <button className="btn pauseBtn" onClick={exam.pause} disabled={exam.paused}>
@@ -186,6 +200,12 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
             );
           })}
         </nav>
+      )}
+
+      {ibps && keyLock && (
+        <div className="warnBanner ibpsKeyLock">
+          <span>&#9888; Keyboard keys are disabled during this exam &mdash; use only the on-screen buttons.</span>
+        </div>
       )}
 
       {exam.tabSwitches > dismissedSwitches && (
@@ -245,14 +265,16 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
           )}
 
           {q.type === "mc" ? (
-            <div className="options">
+            <div className={`options ${ibps ? "ibpsOptions" : ""}`}>
               {q.options?.map((o, i) => (
                 <button
                   key={i}
                   className={`option ${st.given === i ? "sel" : ""}`}
                   onClick={() => exam.setGiven(exam.idx, i)}
                 >
-                  <span className="optKey">{String.fromCharCode(65 + i)}</span>
+                  <span className="optKey">
+                    {ibps ? null : String.fromCharCode(65 + i)}
+                  </span>
                   <span>{o}</span>
                 </button>
               ))}

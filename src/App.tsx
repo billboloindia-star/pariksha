@@ -20,7 +20,7 @@ import type { ExamProgress } from "./examPersist";
 type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library";
 const HUB_PHASES: Phase[] = ["home", "past", "library"];
 
-const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false };
+const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false, examCenterSkin: false };
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
@@ -81,7 +81,7 @@ export default function App() {
         <SystemCheck paper={paper} onBack={again} onProceed={() => setPhase("instructions")} />
       )}
       {phase === "instructions" && paper && (
-        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} monitorTabSwitches={examSettings.monitorTabSwitches} />
+        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} settings={examSettings} />
       )}
       {phase === "exam" && paper && (
         <Exam

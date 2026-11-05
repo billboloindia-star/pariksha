@@ -60,6 +60,7 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
   const [monitorTabSwitches, setMonitorTabSwitches] = useState(true);
   const [simulateZoom, setSimulateZoom] = useState(false);
   const [simulateLaggyCursor, setSimulateLaggyCursor] = useState(false);
+  const [examCenterSkin, setExamCenterSkin] = useState(false);
   const [error, setError] = useState("");
 
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -164,7 +165,7 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
       questions: newQuestions,
       sections: newSections,
     };
-    onConfirm(updated, { monitorTabSwitches, simulateZoom, simulateLaggyCursor });
+    onConfirm(updated, { monitorTabSwitches, simulateZoom, simulateLaggyCursor, examCenterSkin });
   }
 
   return (
@@ -321,6 +322,14 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
             onChange={(e) => setSimulateLaggyCursor(e.target.checked)}
           />
           <span>Simulate a laggy mouse &mdash; practice landing clicks precisely</span>
+        </label>
+        <label className="reviewCheckRow">
+          <input
+            type="checkbox"
+            checked={examCenterSkin}
+            onChange={(e) => setExamCenterSkin(e.target.checked)}
+          />
+          <span>Use the real IBPS/TCS iON test-portal look &mdash; paginated instructions, status-legend colors, candidate photo panel and keyboard-lock warning</span>
         </label>
       </section>
 
