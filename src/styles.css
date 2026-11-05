@@ -83,7 +83,11 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .sidebarAcct{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .sidebarAcct .acctAvatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(145deg,#ffb86b,var(--orange,#e8962a));color:#1b2436;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto}
 .sidebarAcct .sidebarItemLabel{font-size:12px;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.sidebarLogout{width:28px;height:28px;flex:0 0 auto;padding:0;justify-content:center;border-radius:8px;background:rgba(255,255,255,.06);color:#e89a9a}
+/* collapsed rail: only the avatar fits - the logout button would otherwise
+   overlap it, so it's hidden entirely (not just faded) until the sidebar
+   expands on hover/focus, same moment its label-bearing siblings reveal. */
+.sidebarLogout{width:28px;height:28px;flex:0 0 auto;padding:0;justify-content:center;border-radius:8px;background:rgba(255,255,255,.06);color:#e89a9a;display:none}
+.sidebar:hover .sidebarLogout,.sidebar:focus-within .sidebarLogout{display:flex}
 .sidebarLogout:hover{background:rgba(192,57,43,.25)}
 .sidebarLogout svg{color:inherit}
 
