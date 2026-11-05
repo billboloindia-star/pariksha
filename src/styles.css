@@ -398,7 +398,10 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .sysCheckIcon{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#e7ebef;color:var(--dim);font-size:12px;font-weight:700;flex:0 0 auto}
 .sysCheckRow.ok .sysCheckIcon{background:var(--green-bg);color:#fff}
 .sysCheckRow.checking .sysCheckIcon{background:var(--blue);color:#fff}
+.sysCheckRow.weak{border-color:var(--red);background:var(--red-bg)}
+.sysCheckRow.weak .sysCheckIcon{background:var(--red);color:#fff}
 .sysCheckStatus{margin-left:auto;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px}
+.sysCheckWarn{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--red-bg);border:1px solid #f3c7c2;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:600}
 
 /* report: progress trend charts */
 .repGrid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
