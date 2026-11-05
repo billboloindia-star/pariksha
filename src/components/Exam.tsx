@@ -361,7 +361,27 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
         </div>
       )}
 
-      {exam.paused && (
+      {exam.paused && exam.offline && (
+        <div className="modalWrap pauseWrap" role="dialog" aria-modal="true">
+          <div className="modal pauseModal offlineModal">
+            <span className="pauseIcon offlineIcon">
+              <svg viewBox="0 0 24 24" width="26" height="26"><path d="M2 2l20 20M8.5 8.5A11 11 0 0 1 21 7M4.9 10.9A11 11 0 0 1 6.3 9.3M1 5.5a15.9 15.9 0 0 1 4.2-2.9M12 18.5v.01M8.9 14.9a6.9 6.9 0 0 1 2.2-1.3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            <h3>You're offline</h3>
+            <p className="muted">
+              The exam paused itself automatically &mdash; {clock(exam.remaining)} left
+              {exam.sectionTimed && paper.sections[exam.sectionIdx] ? ` in ${paper.sections[exam.sectionIdx].name}` : ""}.
+              Your answers are saved on this device. It will resume on its own the moment your connection is back &mdash; no need to do anything.
+            </p>
+            <div className="offlineSpinner" aria-hidden="true" />
+            {onDiscard && (
+              <button className="btn linkBtn" onClick={onDiscard}>Discard &amp; choose a different paper</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {exam.paused && !exam.offline && (
         <div className="modalWrap pauseWrap" role="dialog" aria-modal="true">
           <div className="modal pauseModal">
             <span className="pauseIcon">

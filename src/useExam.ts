@@ -14,6 +14,10 @@ export interface ExamApi {
   lockedSections: number[];
   finished: boolean;
   paused: boolean;
+  /** true when the current pause was triggered by losing internet connectivity
+   * (as opposed to the user clicking Pause) - the exam resumes itself the moment
+   * connectivity returns, with no action needed from the candidate. */
+  offline: boolean;
   pause: () => void;
   resume: () => void;
   setIdx: (i: number) => void;
@@ -55,6 +59,8 @@ export function useExam(
       Array.from({ length: total }, (_, i) => ({ given: null, marked: false, visited: i === 0, timeMs: 0 }))
   );
   const [paused, setPaused] = useState(!!initialProgress);
+  const [offline, setOffline] = useState(false);
+  const networkPausedRef = useRef(false);
 
   // Seeded so that (Date.now() - startedAt.current) already equals the true elapsed
   // time carried over from before a reload, instead of restarting the clock at 0.
@@ -186,6 +192,33 @@ export function useExam(
     setPaused(false);
   }, []);
 
+  // Internet dropping mid-exam auto-pauses (progress is already saved to
+  // localStorage on every change, see below) and auto-resumes the moment
+  // connectivity returns - no button for the candidate to click either way.
+  // A manual pause (user clicked Pause) is left alone even if the network
+  // happens to blip during it.
+  useEffect(() => {
+    function onOffline() {
+      if (finishedRef.current || pausedRef.current) return;
+      networkPausedRef.current = true;
+      setOffline(true);
+      pause();
+    }
+    function onOnline() {
+      if (!networkPausedRef.current) return;
+      networkPausedRef.current = false;
+      setOffline(false);
+      if (!finishedRef.current && pausedRef.current) resume();
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) onOffline();
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [pause, resume]);
+
   const setIdx = useCallback(
     (i: number) => {
       if (i < 0 || i >= total || finishedRef.current || pausedRef.current) return;
@@ -314,7 +347,7 @@ export function useExam(
 
   return {
     paper, states, idx, remaining, sectionIdx, sectionTimed, lockedSections, finished,
-    paused, pause, resume,
+    paused, offline, pause, resume,
     setIdx, setGiven, clear, toggleMark, saveAndNext, markAndNext, previous, submit,
     status, counts,
     elapsedSec: (Date.now() - startedAt.current) / 1000,
