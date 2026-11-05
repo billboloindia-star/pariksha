@@ -11,14 +11,15 @@ import Exam from "./components/Exam";
 import Report from "./components/Report";
 import PastAttempts from "./components/PastAttempts";
 import Library from "./components/Library";
+import Insights from "./components/Insights";
 import * as api from "./api";
 import type { ExamResult, ExamSettings } from "./types";
 import type { Paper } from "./types";
 import { clearInProgress, loadInProgress } from "./examPersist";
 import type { ExamProgress } from "./examPersist";
 
-type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library";
-const HUB_PHASES: Phase[] = ["home", "past", "library"];
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library" | "insights";
+const HUB_PHASES: Phase[] = ["home", "past", "library", "insights"];
 
 const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false, examCenterSkin: false };
 
@@ -69,6 +70,7 @@ export default function App() {
           {phase === "home" && <Home onLoaded={onLoaded} session={session} onLogin={() => setPhase("login")} />}
           {phase === "past" && <PastAttempts />}
           {phase === "library" && <Library onLoaded={onLoaded} />}
+          {phase === "insights" && <Insights />}
         </HubLayout>
       )}
       {phase === "login" && (

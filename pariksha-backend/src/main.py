@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import List
 
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
@@ -23,6 +24,7 @@ from src.models import (
     LibraryItem,
     LibrarySavePaper,
     LibraryUpload,
+    QuestionNoteUpdate,
 )
 
 MAX_LIBRARY_FILE_BYTES = 6 * 1024 * 1024
@@ -107,6 +109,25 @@ def add_attempt(record: AttemptRecord, email: str = Depends(get_current_email)):
     item["userId"] = email
     attempts_table.put_item(Item=item)
     return record
+
+
+@app.patch("/attempts/{when}/questions/{q_index}/note")
+def update_question_note(
+    when: int, q_index: int, body: QuestionNoteUpdate, email: str = Depends(get_current_email)
+):
+    try:
+        attempts_table.update_item(
+            Key={"userId": email, "when": when},
+            UpdateExpression=f"SET questions[{q_index}].#note = :val",
+            ExpressionAttributeNames={"#note": "note"},
+            ExpressionAttributeValues={":val": body.note},
+            ConditionExpression="attribute_exists(userId)",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise HTTPException(status_code=404, detail="Attempt not found.")
+        raise
+    return {"ok": True}
 
 
 @app.post("/analyze", response_model=PerformanceReview)

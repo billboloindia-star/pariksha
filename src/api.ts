@@ -59,6 +59,13 @@ export function saveAttempt(rec: AttemptRecord): Promise<AttemptRecord> {
   return request<AttemptRecord>("/attempts", { method: "POST", body: JSON.stringify(rec) });
 }
 
+export function updateQuestionNote(when: number, qIndex: number, note: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/attempts/${when}/questions/${qIndex}/note`, {
+    method: "PATCH",
+    body: JSON.stringify({ note }),
+  });
+}
+
 export function analyzePerformance(input: PerformanceInput): Promise<AiReview> {
   return request<AiReview>("/analyze", { method: "POST", body: JSON.stringify(input) });
 }

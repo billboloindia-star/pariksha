@@ -20,6 +20,18 @@ class TopicTally(BaseModel):
     att: int
 
 
+class AttemptQuestionRecord(BaseModel):
+    id: str
+    topic: str
+    type: str
+    text: str
+    options: Optional[List[str]] = None
+    ans: int
+    given: Optional[int] = None
+    timeMs: int
+    note: Optional[str] = None
+
+
 class AttemptRecord(BaseModel):
     when: int
     title: str
@@ -34,6 +46,11 @@ class AttemptRecord(BaseModel):
     byTopic: Optional[Dict[str, TopicTally]] = None
     tabSwitches: Optional[int] = None
     exam: Optional[str] = None
+    questions: Optional[List[AttemptQuestionRecord]] = None
+
+
+class QuestionNoteUpdate(BaseModel):
+    note: str
 
 
 class LibraryUploadFile(BaseModel):

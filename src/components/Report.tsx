@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AiReview as AiReviewData, AttemptRecord, ExamResult, PerformanceInput, Question } from "../types";
+import type { AiReview as AiReviewData, AttemptQuestionRecord, AttemptRecord, ExamResult, PerformanceInput, Question } from "../types";
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
 import AiReview from "./AiReview";
@@ -45,16 +45,25 @@ export default function Report({ result, onAgain }: Props) {
   }, [net, total, avgSec, accuracy, attempted]);
 
   const [history, setHistory] = useState<AttemptRecord[]>([]);
+  const [savedWhen, setSavedWhen] = useState<number | null>(null);
 
   useEffect(() => {
+    const when = Date.now();
+    const questionRecords: AttemptQuestionRecord[] = paper.questions.map((q, i) => ({
+      id: q.id, topic: q.topic, type: q.type,
+      text: q.text.length > 400 ? q.text.slice(0, 399) + "…" : q.text,
+      options: q.options,
+      ans: q.ans, given: states[i].given, timeMs: states[i].timeMs,
+    }));
     const rec: AttemptRecord = {
-      when: Date.now(), title: paper.title, net: Number(net.toFixed(2)), total,
+      when, title: paper.title, net: Number(net.toFixed(2)), total,
       correct, wrong, skipped, secs: Math.round(elapsedSec),
       accuracy: Number(accuracy.toFixed(1)),
       avgSec: Number(avgSec.toFixed(1)),
       byTopic: Object.fromEntries(Object.entries(byTopic).map(([k, t]) => [k, { ok: t.ok, att: t.att }])),
       tabSwitches,
       exam: paper.exam,
+      questions: questionRecords,
     };
 
     let local: AttemptRecord[] = [];
@@ -68,11 +77,60 @@ export default function Report({ result, onAgain }: Props) {
     if (api.backendEnabled() && session) {
       api
         .saveAttempt(rec)
-        .then(() => api.fetchAttempts())
+        .then(() => { setSavedWhen(when); return api.fetchAttempts(); })
         .then(setHistory)
         .catch(() => { /* keep the local-only history already shown */ });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paper.title, paper.exam, net, total, correct, wrong, skipped, elapsedSec, accuracy, avgSec, byTopic, tabSwitches]);
+
+  // Per-question time budget, derived from the paper's own pacing (sectional
+  // papers budget within their section; everything else against the overall
+  // duration) - used for the pacing breakdown and the fatigue curve below.
+  const perQBudgetSec = useMemo(() => {
+    if (paper.sections.length > 1) {
+      return paper.questions.map((_, i) => {
+        const sec = paper.sections.find((s) => i >= s.from && i <= s.to);
+        const n = sec ? sec.to - sec.from + 1 : total;
+        const mins = sec?.minutes ?? paper.durationMinutes;
+        return (mins * 60) / Math.max(1, n);
+      });
+    }
+    const budget = (paper.durationMinutes * 60) / Math.max(1, total);
+    return paper.questions.map(() => budget);
+  }, [paper, total]);
+
+  const overBudget = useMemo(
+    () =>
+      paper.questions
+        .map((q, i) => ({ q, i, s: states[i], budget: perQBudgetSec[i] }))
+        .filter((o) => o.s.given !== null && o.s.timeMs / 1000 > o.budget * 1.5)
+        .sort((a, b) => b.s.timeMs / 1000 - b.budget - (a.s.timeMs / 1000 - a.budget)),
+    [paper.questions, states, perQBudgetSec]
+  );
+
+  const timeSeries = useMemo<Series[]>(
+    () => [{
+      name: "Seconds spent",
+      points: paper.questions.map((_, i) => ({ x: i, y: states[i].given !== null || states[i].visited ? states[i].timeMs / 1000 : null })),
+    }],
+    [paper.questions, states]
+  );
+
+  const fatigueSeries = useMemo<Series[]>(() => {
+    const window = Math.max(3, Math.round(total / 8));
+    const points = paper.questions.map((q, i) => {
+      if (i < window - 1) return { x: i, y: null };
+      let ok = 0, att = 0;
+      for (let k = i - window + 1; k <= i; k++) {
+        if (states[k].given === null) continue;
+        att += 1;
+        if (states[k].given === paper.questions[k].ans) ok += 1;
+      }
+      return { x: i, y: att ? Math.round((ok / att) * 100) : null };
+    });
+    return [{ name: `Rolling accuracy % (last ${window} Qs)`, points }];
+  }, [paper.questions, states, total]);
 
   const slowest = useMemo(
     () =>
@@ -113,7 +171,7 @@ export default function Report({ result, onAgain }: Props) {
   const [aiState, setAiState] = useState<"idle" | "loading" | "error" | "done">("idle");
   const [aiReview, setAiReview] = useState<AiReviewData | null>(null);
 
-  const [tab, setTab] = useState<"overview" | "topics" | "review" | "progress">("overview");
+  const [tab, setTab] = useState<"overview" | "topics" | "review" | "pacing" | "progress">("overview");
   const [reviewFilter, setReviewFilter] = useState<"all" | "correct" | "wrong" | "skipped">("all");
 
   const topicRows = useMemo(() => {
@@ -152,6 +210,24 @@ export default function Report({ result, onAgain }: Props) {
   }, [paper.questions, reviewFilter, states]);
 
   const [selectedQ, setSelectedQ] = useState<number | null>(null);
+  const [notes, setNotes] = useState<Record<number, string>>({});
+  const [noteSaving, setNoteSaving] = useState<"idle" | "saving" | "saved">("idle");
+
+  function saveNote(qIndex: number, text: string) {
+    setNotes((prev) => ({ ...prev, [qIndex]: text }));
+  }
+
+  async function commitNote(qIndex: number) {
+    if (savedWhen === null) return;
+    setNoteSaving("saving");
+    try {
+      await api.updateQuestionNote(savedWhen, qIndex, notes[qIndex] ?? "");
+      setNoteSaving("saved");
+      setTimeout(() => setNoteSaving("idle"), 1200);
+    } catch {
+      setNoteSaving("idle");
+    }
+  }
 
   useEffect(() => {
     if (tab !== "review") return;
@@ -220,6 +296,80 @@ export default function Report({ result, onAgain }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  async function shareResultCard() {
+    const W2 = 1000, H2 = 560;
+    const canvas = document.createElement("canvas");
+    canvas.width = W2; canvas.height = H2;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const grad = ctx.createLinearGradient(0, 0, W2, H2);
+    grad.addColorStop(0, "#131f36");
+    grad.addColorStop(1, "#1f3356");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W2, H2);
+
+    ctx.fillStyle = "#ffd77a";
+    ctx.font = "700 22px -apple-system, Segoe UI, Arial";
+    ctx.fillText("PARIKSHA", 48, 60);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 34px -apple-system, Segoe UI, Arial";
+    const title = paper.title.length > 44 ? paper.title.slice(0, 43) + "…" : paper.title;
+    ctx.fillText(title, 48, 115);
+
+    ctx.fillStyle = "#b8cade";
+    ctx.font = "600 16px -apple-system, Segoe UI, Arial";
+    ctx.fillText(paper.exam !== "General" ? paper.exam : "Mock exam", 48, 145);
+
+    ctx.fillStyle = "#4fd18b";
+    ctx.font = "800 96px -apple-system, Segoe UI, Arial";
+    ctx.fillText(net.toFixed(2), 48, 270);
+    ctx.fillStyle = "#b8cade";
+    ctx.font = "600 20px -apple-system, Segoe UI, Arial";
+    ctx.fillText(`net score / ${total}`, 48, 300);
+
+    const stats: [string, string][] = [
+      ["Accuracy", `${accuracy}%`],
+      ["Attempted", `${attempted}/${total}`],
+      ["Avg / question", `${avgSec.toFixed(1)}s`],
+      ["Time used", fmt(elapsedSec)],
+    ];
+    stats.forEach(([label, val], i) => {
+      const x = 48 + i * 230;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "800 28px -apple-system, Segoe UI, Arial";
+      ctx.fillText(val, x, 400);
+      ctx.fillStyle = "#8ba2c4";
+      ctx.font = "600 13px -apple-system, Segoe UI, Arial";
+      ctx.fillText(label.toUpperCase(), x, 425);
+    });
+
+    ctx.fillStyle = "#6b7585";
+    ctx.font = "600 14px -apple-system, Segoe UI, Arial";
+    ctx.fillText("pariksha.billbolo.in", 48, H2 - 36);
+
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], "pariksha-result.png", { type: "image/png" });
+
+    const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean; share?: (data: ShareData) => Promise<void> };
+    if (nav.canShare?.({ files: [file] }) && nav.share) {
+      try {
+        await nav.share({ files: [file], title: "My Pariksha result" });
+        return;
+      } catch { /* fall through to download */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pariksha-result.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const selected = selectedQ !== null ? paper.questions[selectedQ] : null;
   const selectedState = selectedQ !== null ? states[selectedQ] : null;
   const selectedRes = selectedQ !== null ? questionStatus(selectedQ) : null;
@@ -244,6 +394,7 @@ export default function Report({ result, onAgain }: Props) {
         <button className={`repTab ${tab === "overview" ? "active" : ""}`} onClick={() => setTab("overview")}>Overview</button>
         <button className={`repTab ${tab === "topics" ? "active" : ""}`} onClick={() => setTab("topics")}>By Topic</button>
         <button className={`repTab ${tab === "review" ? "active" : ""}`} onClick={() => setTab("review")}>Review Answers</button>
+        <button className={`repTab ${tab === "pacing" ? "active" : ""}`} onClick={() => setTab("pacing")}>Pacing</button>
         <button className={`repTab ${tab === "progress" ? "active" : ""}`} onClick={() => setTab("progress")}>Progress</button>
       </nav>
 
@@ -251,6 +402,10 @@ export default function Report({ result, onAgain }: Props) {
         {tab === "overview" && (
           <>
             <div className="verdict">{verdict}</div>
+            <button className="btn shareResultBtn" onClick={shareResultCard}>
+              <svg viewBox="0 0 24 24" width="15" height="15"><path d="M18 8a3 3 0 1 0-2.83-4H15a3 3 0 0 0 .05 2.1L8.91 9.26a3 3 0 1 0 0 5.48l6.14 3.16A3 3 0 1 0 15 16a3 3 0 0 0 .05.59l-6.1-3.14a3 3 0 0 0 0-2.9l6.1-3.14A3 3 0 0 0 18 8z" fill="currentColor" /></svg>
+              Share result card
+            </button>
 
             {api.backendEnabled() && api.getSession() && (
               <div className="aiCta">
@@ -387,6 +542,25 @@ export default function Report({ result, onAgain }: Props) {
                     <b className="good">{answerText(selected)}</b>
                   </div>
                   {selected.solution && <div className="solution">{selected.solution}</div>}
+
+                  {api.backendEnabled() && api.getSession() && (
+                    <div className="qNoteBox">
+                      <label htmlFor="qnote">Your note on this question</label>
+                      <textarea
+                        id="qnote"
+                        placeholder="e.g. remember: this formula, or silly mistake with signs&hellip;"
+                        value={notes[selectedQ!] ?? ""}
+                        onChange={(e) => saveNote(selectedQ!, e.target.value)}
+                        onBlur={() => commitNote(selectedQ!)}
+                        disabled={savedWhen === null}
+                        rows={2}
+                      />
+                      <span className="muted small qNoteStatus">
+                        {savedWhen === null ? "saving to your account…" : noteSaving === "saving" ? "saving…" : noteSaving === "saved" ? "saved" : " "}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="rowBtns">
                     <button className="btn" onClick={() => stepReview(-1)} disabled={selectedPos <= 0}>&larr; Prev</button>
                     <button className="btn primary" onClick={() => stepReview(1)} disabled={selectedPos < 0 || selectedPos >= filteredIndices.length - 1}>Next &rarr;</button>
@@ -395,6 +569,43 @@ export default function Report({ result, onAgain }: Props) {
               )}
             </div>
           </section>
+        )}
+
+        {tab === "pacing" && (
+          <>
+            <section className="repSection">
+              <h3>Time spent per question</h3>
+              <p className="muted small">
+                Budgeted {fmt(perQBudgetSec[0])} / question on this paper. Questions well past that are flagged below.
+              </p>
+              <TrendChart title="Seconds spent" series={timeSeries} yFormat={(v) => `${Math.round(v)}s`} />
+            </section>
+
+            <section className="repSection">
+              <h3>Fatigue curve</h3>
+              <p className="muted small">Rolling accuracy as the paper goes on &mdash; a falling line late in the paper means fatigue, not knowledge gaps.</p>
+              <TrendChart title="Rolling accuracy %" series={fatigueSeries} yFormat={(v) => `${Math.round(v)}%`} />
+            </section>
+
+            <section className="repSection">
+              <h3>Over-budget questions</h3>
+              {overBudget.length === 0 ? (
+                <p className="muted small">None &mdash; every attempted question stayed within 1.5&times; its time budget.</p>
+              ) : (
+                overBudget.slice(0, 8).map((o) => {
+                  const ok = o.s.given === o.q.ans;
+                  return (
+                    <div className="listRow" key={o.i}>
+                      <span className="muted">Q{o.i + 1} &middot; {o.q.topic}</span>
+                      <span className={ok ? "good" : "bad"}>
+                        {secs(o.s.timeMs)} spent vs {fmt(o.budget)} budget &middot; {ok ? "right" : "wrong"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </section>
+          </>
         )}
 
         {tab === "progress" && (

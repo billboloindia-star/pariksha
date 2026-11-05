@@ -100,6 +100,21 @@ export function statusOf(q: QState): Status {
   return "notVisited";
 }
 
+/** One question's detail as stored with an attempt - powers the cross-attempt
+ * mistake journal and per-question notes. Text/options are truncated before
+ * saving to keep attempt records well under DynamoDB's per-item size limit. */
+export interface AttemptQuestionRecord {
+  id: string;
+  topic: string;
+  type: QType;
+  text: string;
+  options?: string[];
+  ans: number;
+  given: number | null;
+  timeMs: number;
+  note?: string;
+}
+
 export interface AttemptRecord {
   when: number;
   title: string;
@@ -114,6 +129,8 @@ export interface AttemptRecord {
   byTopic?: Record<string, { ok: number; att: number }>;
   tabSwitches?: number;
   exam?: string;
+  /** Absent on attempts saved before this field existed. */
+  questions?: AttemptQuestionRecord[];
 }
 
 export interface TopicStat {
