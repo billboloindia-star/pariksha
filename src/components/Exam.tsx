@@ -141,14 +141,16 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
       {paper.sections.length > 1 && (
         <nav className="sectionBar">
           {paper.sections.map((s, si) => {
-            const locked = exam.lockedSections.indexOf(si) >= 0;
+            const timedOut = exam.lockedSections.indexOf(si) >= 0;
+            const notYourTurn = exam.sectionTimed && si !== exam.sectionIdx;
+            const locked = timedOut || notYourTurn;
             return (
               <button
                 key={s.name}
                 className={`sectionTab ${activeSection?.name === s.name ? "active" : ""} ${locked ? "locked" : ""}`}
                 onClick={() => jumpSection(s.from)}
                 disabled={locked}
-                title={locked ? "time over for this section" : s.name}
+                title={timedOut ? "time over for this section" : notYourTurn ? "locked until this section's turn" : s.name}
               >
                 {s.name}
                 {typeof s.minutes === "number" && <span className="secMins">{s.minutes}m</span>}
@@ -270,7 +272,7 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Pro
           <div className="palette">
             {paper.questions.map((_, i) => {
               const secOf = paper.sections.findIndex((sec) => i >= sec.from && i <= sec.to);
-              const locked = exam.lockedSections.indexOf(secOf) >= 0;
+              const locked = exam.lockedSections.indexOf(secOf) >= 0 || (exam.sectionTimed && secOf !== exam.sectionIdx);
               return (
                 <button
                   key={i}

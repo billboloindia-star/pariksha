@@ -145,10 +145,13 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
       if (i < 0 || i >= total || finishedRef.current) return;
       const si = sectionOf(i);
       if (lockedRef.current.indexOf(si) >= 0) return;
+      // Sectional timing is strict: only the current section is navigable. A
+      // section is reachable only by its own clock expiring (which locks the
+      // one being left) - never by jumping ahead or back manually.
+      if (sectionTimed && si !== sectionRef.current) return;
       flushTime();
       idxRef.current = i;
       setIdxRaw(i);
-      if (sectionTimed && si !== sectionRef.current) enterSection(si);
       setStates((prev) => {
         if (prev[i].visited) return prev;
         const next = prev.slice();
@@ -156,7 +159,7 @@ export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches =
         return next;
       });
     },
-    [flushTime, total, sectionOf, sectionTimed, enterSection]
+    [flushTime, total, sectionOf, sectionTimed]
   );
 
   const setGiven = useCallback((i: number, v: number | null) => {
