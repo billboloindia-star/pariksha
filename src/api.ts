@@ -1,4 +1,4 @@
-import type { AttemptRecord, AiReview, PerformanceInput } from "./types";
+import type { AttemptRecord, AiReview, LibraryFileLink, LibraryItem, Paper, PerformanceInput } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined;
 const SESSION_KEY = "pariksha_session";
@@ -61,4 +61,26 @@ export function saveAttempt(rec: AttemptRecord): Promise<AttemptRecord> {
 
 export function analyzePerformance(input: PerformanceInput): Promise<AiReview> {
   return request<AiReview>("/analyze", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function fetchLibrary(): Promise<LibraryItem[]> {
+  return request<LibraryItem[]>("/library");
+}
+
+export interface LibraryUploadFile { fileName: string; fileType: string; fileBase64: string }
+
+export function uploadLibraryFiles(files: LibraryUploadFile[], title?: string): Promise<LibraryItem> {
+  return request<LibraryItem>("/library", { method: "POST", body: JSON.stringify({ files, title }) });
+}
+
+export function getLibraryFileLinks(itemId: string): Promise<LibraryFileLink[]> {
+  return request<LibraryFileLink[]>(`/library/${itemId}/files`);
+}
+
+export function saveLibraryPaper(itemId: string, paper: Paper): Promise<LibraryItem> {
+  return request<LibraryItem>(`/library/${itemId}`, { method: "PUT", body: JSON.stringify({ paper }) });
+}
+
+export function deleteLibraryItem(itemId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/library/${itemId}`, { method: "DELETE" });
 }

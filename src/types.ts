@@ -64,6 +64,25 @@ export interface Paper {
   questions: Question[];
 }
 
+export interface LibraryFile {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
+export interface LibraryItem {
+  itemId: string;
+  title: string;
+  files: LibraryFile[];
+  createdAt: number;
+  paper?: Paper;
+}
+
+export interface LibraryFileLink {
+  fileName: string;
+  url: string;
+}
+
 export interface QState {
   given: number | null;
   marked: boolean;

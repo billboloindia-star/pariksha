@@ -76,7 +76,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .error{margin-top:16px;padding:12px 14px;border-radius:8px;background:#fdecea;border:1px solid #f5c6c1;color:#8c2b1f;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap}
 .homeFoot{display:flex;justify-content:space-between;align-items:center;margin-top:30px;padding-top:18px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
 .homeFoot .tag{display:flex;gap:9px;align-items:center;font-weight:600}
-.homeFoot .tag i{width:5px;height:5px;border-radius:50%;background:var(--orange);display:inline-block}
+.homeFoot .tag i{width:5px;height:5px;border-radius:50%;background:#e8962a;display:inline-block}
 .homeFoot .right{font-family:var(--mono);color:var(--dim);background:var(--soft);padding:4px 10px;border-radius:7px;font-size:11px}
 
 /* ---- step cards (Home) ---- */
@@ -584,3 +584,67 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   .pastAttemptRow{flex-wrap:wrap}
   .pastAttemptStats{align-items:flex-start}
 }
+
+/* ---------- paper vault ---------- */
+.vaultHero{display:flex;align-items:center;gap:22px;background:linear-gradient(120deg,#101b34 0%,#1b3666 55%,#2e5295 100%);border-radius:24px;padding:28px 32px;color:#fff;box-shadow:0 30px 60px -28px rgba(12,24,48,.55);position:relative;overflow:hidden;margin-bottom:22px}
+.vaultHero::after{content:"";position:absolute;right:-60px;top:-70px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(243,173,78,.3),transparent 70%)}
+.vaultHeroIcon{width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.14);display:grid;place-items:center;flex:0 0 auto;position:relative}
+.vaultHeroText{position:relative;flex:1}
+.vaultHeroText h1{margin:0 0 6px;font-size:19px;color:#fff}
+.vaultHeroText p{margin:0;color:#c6d1ec;font-size:13px;max-width:560px;line-height:1.55}
+.vaultStat{position:relative;text-align:center;padding:0 16px;border-left:1px solid rgba(255,255,255,.14);flex:0 0 auto}
+.vaultStat b{display:block;font-size:20px;font-family:inherit}
+.vaultStat span{font-size:10.5px;color:#9db1dd;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+@media (max-width:760px){.vaultHero{flex-wrap:wrap}.vaultStat{border-left:none;padding:0;text-align:left}}
+
+.dropCard{position:relative;background:linear-gradient(180deg,#fff,#fdfdfe);border:1.5px dashed #c9d3e6;border-radius:20px;padding:22px 26px;display:flex;align-items:center;gap:18px;box-shadow:0 18px 36px -28px rgba(19,31,54,.25);margin-bottom:20px}
+.dropIcon{width:50px;height:50px;border-radius:14px;background:linear-gradient(150deg,#e7eff8,#dbe6f6);display:grid;place-items:center;color:var(--blue);flex:0 0 auto;box-shadow:inset 0 1px 1px #fff,0 8px 18px -10px rgba(26,115,199,.5)}
+.dropText{flex:1;min-width:0}
+.dropText b{display:block;font-size:14.5px;margin-bottom:3px}
+.dropText span{font-size:12px;color:var(--dim)}
+.dropBtn{display:block;padding:11px 20px;border-radius:11px;background:linear-gradient(150deg,var(--blue-2),var(--navy-2));color:#fff;font-weight:800;font-size:13px;box-shadow:0 12px 22px -12px rgba(26,115,199,.6);flex:0 0 auto}
+@media (max-width:620px){.dropCard{flex-wrap:wrap}.dropBtn{width:100%;text-align:center}}
+
+.vaultGrid{display:flex;flex-direction:column;gap:11px}
+.vaultCard{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;box-shadow:0 14px 28px -26px rgba(19,31,54,.3);width:100%;text-align:left;font-family:inherit;cursor:pointer}
+.vaultCard:hover{border-color:var(--line-2)}
+.vaultCardMain{flex:1;min-width:0}
+.vaultCardTitle{font-size:14px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vaultCardMeta{font-size:11.5px;color:var(--dim)}
+.cardArrow{color:var(--dim-2,var(--dim));flex:0 0 auto}
+@media (max-width:620px){
+  .vaultCard{flex-wrap:wrap}
+  .vaultCardMain{min-width:160px}
+}
+
+.fileTypeIcon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto}
+.fileTypeIcon.pdf{background:#fdecea;color:#c0392b}
+.fileTypeIcon.img{background:#e9f6ef;color:var(--green)}
+
+.statusPill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:5px 11px 5px 8px;border-radius:999px;flex:0 0 auto;white-space:nowrap}
+.statusPill.ready{background:#e9f6ef;color:var(--green)}
+.statusPill.pending{background:#fdf3e4;color:#a86a1a}
+.statusPill svg{width:12px;height:12px}
+
+.detailIcon{width:48px;height:48px;border-radius:14px;background:#fdecea;color:#c0392b;display:grid;place-items:center;flex:0 0 auto}
+.detailIcon.ready{background:#e9f6ef;color:var(--green)}
+.detailIcon .fileTypeIcon{background:none;width:auto;height:auto}
+
+.libFileList{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.libFileRow2{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin-bottom:9px}
+.libFileRow2 .fn{flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.libFileRow2 .fs{font-size:11px;color:var(--dim);flex:0 0 auto}
+.libFileRow2 .fileTypeIcon{width:32px;height:32px;border-radius:9px}
+.libFileRow2 .fileTypeIcon svg{width:15px;height:15px}
+.dlBtn{width:30px;height:30px;border-radius:8px;background:#fff;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--blue);flex:0 0 auto}
+.dlBtn:hover{border-color:var(--blue)}
+
+.readyBanner{display:flex;align-items:center;gap:12px;background:#e9f6ef;border:1px solid #cdeedb;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.readyBanner svg{color:var(--green);flex:0 0 auto}
+.readyBanner b{font-size:13.5px;color:#1e6b43;display:block}
+.readyBanner span{font-size:11.5px;color:#357a56}
+
+.startBtn{width:100%;padding:14px;border-radius:12px;background:linear-gradient(150deg,#2f8f4e,#1e6b3a);color:#fff;font-weight:800;font-size:14px;border:none;box-shadow:0 16px 28px -14px rgba(30,139,78,.55);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+
+.deleteLink{display:block;text-align:center;margin:18px auto 0;color:#c0392b;font-size:12.5px;font-weight:700;background:none;border:none;cursor:pointer}
+.deleteLink:hover{text-decoration:underline}

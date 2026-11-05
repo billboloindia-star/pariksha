@@ -1,6 +1,6 @@
 """Request/response shapes. AttemptRecord mirrors src/types.ts on the frontend."""
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -34,3 +34,40 @@ class AttemptRecord(BaseModel):
     byTopic: Optional[Dict[str, TopicTally]] = None
     tabSwitches: Optional[int] = None
     exam: Optional[str] = None
+
+
+class LibraryUploadFile(BaseModel):
+    fileName: str
+    fileType: str
+    fileBase64: str
+
+
+class LibraryUpload(BaseModel):
+    # A paper is often several page-photos rather than one file - a single vault
+    # entry can hold multiple files, uploaded together in one request.
+    title: Optional[str] = None
+    files: List[LibraryUploadFile]
+
+
+class LibrarySavePaper(BaseModel):
+    # Already parsed/validated client-side by src/paper.ts's parsePaper() - stored as-is.
+    paper: Dict
+
+
+class LibraryFile(BaseModel):
+    fileName: str
+    fileType: str
+    fileSize: int
+
+
+class LibraryItem(BaseModel):
+    itemId: str
+    title: str
+    files: List[LibraryFile]
+    createdAt: int
+    paper: Optional[Dict] = None
+
+
+class LibraryFileLink(BaseModel):
+    fileName: str
+    url: str

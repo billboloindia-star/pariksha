@@ -7,13 +7,14 @@ import Instructions from "./components/Instructions";
 import Exam from "./components/Exam";
 import Report from "./components/Report";
 import PastAttempts from "./components/PastAttempts";
+import Library from "./components/Library";
 import * as api from "./api";
 import type { ExamResult, ExamSettings } from "./types";
 import type { Paper } from "./types";
 import { clearInProgress, loadInProgress } from "./examPersist";
 import type { ExamProgress } from "./examPersist";
 
-type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past";
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library";
 
 const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false };
 
@@ -60,9 +61,11 @@ export default function App() {
             setSession(null);
           }}
           onPastAttempts={() => setPhase("past")}
+          onLibrary={() => setPhase("library")}
         />
       )}
       {phase === "past" && <PastAttempts onBack={() => setPhase("home")} />}
+      {phase === "library" && <Library onLoaded={onLoaded} onBack={() => setPhase("home")} />}
       {phase === "login" && (
         <Login onDone={(s) => { setSession(s); setPhase("home"); }} onBack={() => setPhase("home")} />
       )}

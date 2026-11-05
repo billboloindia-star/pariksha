@@ -15,6 +15,7 @@ interface Props {
   onLogin: () => void;
   onLogout: () => void;
   onPastAttempts: () => void;
+  onLibrary: () => void;
 }
 
 function initials(email: string): string {
@@ -31,7 +32,7 @@ function stats(history: AttemptRecord[]) {
   return { attempts, bestAccuracy, exams };
 }
 
-export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttempts }: Props) {
+export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttempts, onLibrary }: Props) {
   const [error, setError] = useState<string>("");
   const [pasted, setPasted] = useState("");
   const [fileName, setFileName] = useState("");
@@ -123,6 +124,12 @@ export default function Home({ onLoaded, session, onLogin, onLogout, onPastAttem
             <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 9v4l3 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             Past attempts
           </button>
+          {api.backendEnabled() && (
+            <button className="pastBtn" onClick={onLibrary}>
+              <svg width="15" height="15" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+              Paper vault
+            </button>
+          )}
           {api.backendEnabled() && session && (
             <>
               <div className="acctPill">

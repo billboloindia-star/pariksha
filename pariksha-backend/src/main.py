@@ -1,5 +1,8 @@
 """Pariksha backend: email/password accounts + attempt history, on AWS Lambda."""
 
+import base64
+import time
+import uuid
 from decimal import Decimal
 from typing import List
 
@@ -10,8 +13,20 @@ from mangum import Mangum
 
 from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
-from src.db import attempts_table, users_table
-from src.models import AttemptRecord, AuthResponse, Credentials
+from src.config import settings
+from src.db import attempts_table, library_table, s3, users_table
+from src.models import (
+    AttemptRecord,
+    AuthResponse,
+    Credentials,
+    LibraryFileLink,
+    LibraryItem,
+    LibrarySavePaper,
+    LibraryUpload,
+)
+
+MAX_LIBRARY_FILE_BYTES = 6 * 1024 * 1024
+MAX_LIBRARY_FILES_PER_UPLOAD = 20
 
 _reviewer = GeminiReviewer()
 
@@ -100,6 +115,95 @@ def analyze(data: PerformanceInput, email: str = Depends(get_current_email)):
         return _reviewer.review(data)
     except Exception:
         raise HTTPException(status_code=502, detail="Couldn't generate a review — try again.")
+
+
+def _library_key(email: str, item_id: str, file_name: str) -> str:
+    return f"{email}/{item_id}/{file_name}"
+
+
+@app.get("/library", response_model=List[LibraryItem])
+def list_library(email: str = Depends(get_current_email)):
+    res = library_table.query(KeyConditionExpression=Key("userId").eq(email), ScanIndexForward=False)
+    return [_from_decimal(item) for item in res.get("Items", [])]
+
+
+@app.post("/library", response_model=LibraryItem)
+def upload_library_files(body: LibraryUpload, email: str = Depends(get_current_email)):
+    if not body.files:
+        raise HTTPException(status_code=400, detail="No files to save.")
+    if len(body.files) > MAX_LIBRARY_FILES_PER_UPLOAD:
+        raise HTTPException(status_code=400, detail=f"Too many files at once (max {MAX_LIBRARY_FILES_PER_UPLOAD}).")
+
+    decoded = []
+    for f in body.files:
+        try:
+            raw = base64.b64decode(f.fileBase64, validate=True)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Could not decode {f.fileName}.")
+        if len(raw) > MAX_LIBRARY_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"{f.fileName} is too large for the vault (max 6MB each).")
+        decoded.append((f, raw))
+
+    item_id = uuid.uuid4().hex
+    files_meta = []
+    for f, raw in decoded:
+        key = _library_key(email, item_id, f.fileName)
+        s3.put_object(Bucket=settings.library_bucket, Key=key, Body=raw, ContentType=f.fileType or "application/octet-stream")
+        files_meta.append({"fileName": f.fileName, "fileType": f.fileType, "fileSize": len(raw)})
+
+    title = body.title or files_meta[0]["fileName"]
+    if not body.title and len(files_meta) > 1:
+        title = f"{files_meta[0]['fileName']} (+{len(files_meta) - 1} more)"
+
+    item = {
+        "userId": email,
+        "itemId": item_id,
+        "title": title,
+        "files": files_meta,
+        "createdAt": int(time.time() * 1000),
+    }
+    library_table.put_item(Item=item)
+    return {k: v for k, v in item.items() if k != "userId"}
+
+
+@app.get("/library/{item_id}/files", response_model=List[LibraryFileLink])
+def library_file_links(item_id: str, email: str = Depends(get_current_email)):
+    item = library_table.get_item(Key={"userId": email, "itemId": item_id}).get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found.")
+    links = []
+    for f in item.get("files", []):
+        key = _library_key(email, item_id, f["fileName"])
+        url = s3.generate_presigned_url(
+            "get_object", Params={"Bucket": settings.library_bucket, "Key": key}, ExpiresIn=300
+        )
+        links.append({"fileName": f["fileName"], "url": url})
+    return links
+
+
+@app.put("/library/{item_id}", response_model=LibraryItem)
+def save_library_paper(item_id: str, body: LibrarySavePaper, email: str = Depends(get_current_email)):
+    item = library_table.get_item(Key={"userId": email, "itemId": item_id}).get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found.")
+    library_table.update_item(
+        Key={"userId": email, "itemId": item_id},
+        UpdateExpression="SET paper = :p",
+        ExpressionAttributeValues={":p": _to_decimal(body.paper)},
+    )
+    updated = {**item, "paper": body.paper}
+    return _from_decimal({k: v for k, v in updated.items() if k != "userId"})
+
+
+@app.delete("/library/{item_id}")
+def delete_library_item(item_id: str, email: str = Depends(get_current_email)):
+    item = library_table.get_item(Key={"userId": email, "itemId": item_id}).get("Item")
+    if item:
+        for f in item.get("files", []):
+            key = _library_key(email, item_id, f["fileName"])
+            s3.delete_object(Bucket=settings.library_bucket, Key=key)
+    library_table.delete_item(Key={"userId": email, "itemId": item_id})
+    return {"ok": True}
 
 
 handler = Mangum(app)

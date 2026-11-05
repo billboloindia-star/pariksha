@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     gemini_api_key: str
     users_table: str = "pariksha-users-dev"
     attempts_table: str = "pariksha-attempts-dev"
+    library_table: str = "pariksha-library-dev"
+    library_bucket: str = ""
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 

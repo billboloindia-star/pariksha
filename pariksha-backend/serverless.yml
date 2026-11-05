@@ -13,6 +13,8 @@ provider:
     STAGE: ${self:provider.stage}
     USERS_TABLE: pariksha-users-${self:provider.stage}
     ATTEMPTS_TABLE: pariksha-attempts-${self:provider.stage}
+    LIBRARY_TABLE: pariksha-library-${self:provider.stage}
+    LIBRARY_BUCKET: pariksha-library-${self:provider.stage}-${aws:accountId}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -30,6 +32,20 @@ provider:
             - dynamodb:PutItem
             - dynamodb:Query
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.ATTEMPTS_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.LIBRARY_TABLE}
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: arn:aws:s3:::${self:provider.environment.LIBRARY_BUCKET}/*
         - Effect: Allow
           Action:
             - logs:CreateLogGroup
@@ -88,6 +104,43 @@ resources:
             KeyType: HASH
           - AttributeName: when
             KeyType: RANGE
+
+    LibraryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.LIBRARY_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: itemId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: itemId
+            KeyType: RANGE
+
+    LibraryBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.LIBRARY_BUCKET}
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods: [GET]
+              AllowedOrigins:
+                - https://pariksha.billbolo.in
+                - http://localhost:5173
+              AllowedHeaders: ['*']
 
 custom:
   pythonRequirements:
