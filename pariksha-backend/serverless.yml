@@ -7,13 +7,14 @@ provider:
   region: ap-south-1
   stage: ${opt:stage, 'dev'}
   memorySize: 512
-  timeout: 15
+  timeout: 28
 
   environment:
     STAGE: ${self:provider.stage}
     USERS_TABLE: pariksha-users-${self:provider.stage}
     ATTEMPTS_TABLE: pariksha-attempts-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
+    GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
   iam:
     role:

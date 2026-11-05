@@ -8,9 +8,12 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
+from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
 from src.db import attempts_table, users_table
 from src.models import AttemptRecord, AuthResponse, Credentials
+
+_reviewer = GeminiReviewer()
 
 app = FastAPI(title="Pariksha API")
 
@@ -89,6 +92,14 @@ def add_attempt(record: AttemptRecord, email: str = Depends(get_current_email)):
     item["userId"] = email
     attempts_table.put_item(Item=item)
     return record
+
+
+@app.post("/analyze", response_model=PerformanceReview)
+def analyze(data: PerformanceInput, email: str = Depends(get_current_email)):
+    try:
+        return _reviewer.review(data)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Couldn't generate a review — try again.")
 
 
 handler = Mangum(app)

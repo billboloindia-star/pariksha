@@ -1,4 +1,4 @@
-import type { AttemptRecord } from "./types";
+import type { AttemptRecord, AiReview, PerformanceInput } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined;
 const SESSION_KEY = "pariksha_session";
@@ -57,4 +57,8 @@ export function fetchAttempts(): Promise<AttemptRecord[]> {
 
 export function saveAttempt(rec: AttemptRecord): Promise<AttemptRecord> {
   return request<AttemptRecord>("/attempts", { method: "POST", body: JSON.stringify(rec) });
+}
+
+export function analyzePerformance(input: PerformanceInput): Promise<AiReview> {
+  return request<AiReview>("/analyze", { method: "POST", body: JSON.stringify(input) });
 }

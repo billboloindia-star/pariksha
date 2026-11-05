@@ -118,3 +118,53 @@ export interface ExamResult {
   byTopic: Record<string, TopicStat>;
   tabSwitches: number;
 }
+
+export interface TopicSummary {
+  topic: string;
+  attempted: number;
+  total: number;
+  correct: number;
+  avgSec?: number;
+}
+
+export interface SlowAnswer {
+  question: number;
+  topic: string;
+  seconds: number;
+  correct: boolean;
+}
+
+export interface PerformanceInput {
+  examTitle: string;
+  examCategory: string;
+  net: number;
+  total: number;
+  correct: number;
+  wrong: number;
+  skipped: number;
+  attempted: number;
+  accuracy: number;
+  avgSec: number;
+  tabSwitches: number;
+  topics: TopicSummary[];
+  slowest: SlowAnswer[];
+}
+
+export interface ReviewPoint {
+  title: string;
+  detail: string;
+}
+
+export interface StudyPlanDay {
+  day: string;
+  title: string;
+  detail: string;
+  minutes: number;
+}
+
+export interface AiReview {
+  summary: string;
+  strengths: ReviewPoint[];
+  weaknesses: ReviewPoint[];
+  plan: StudyPlanDay[];
+}

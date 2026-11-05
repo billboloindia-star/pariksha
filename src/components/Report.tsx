@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AttemptRecord, ExamResult, Question } from "../types";
+import type { AiReview as AiReviewData, AttemptRecord, ExamResult, PerformanceInput, Question } from "../types";
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
+import AiReview from "./AiReview";
 import * as api from "../api";
 
 interface Props {
@@ -109,6 +110,36 @@ export default function Report({ result, onAgain }: Props) {
     }));
   }, [chrono]);
 
+  const [aiState, setAiState] = useState<"idle" | "loading" | "error" | "done">("idle");
+  const [aiReview, setAiReview] = useState<AiReviewData | null>(null);
+
+  async function requestAiReview() {
+    setAiState("loading");
+    const input: PerformanceInput = {
+      examTitle: paper.title,
+      examCategory: paper.exam,
+      net, total, correct, wrong, skipped, attempted, accuracy, avgSec, tabSwitches,
+      topics: Object.entries(byTopic).map(([topic, t]) => ({
+        topic, attempted: t.att, total: t.n, correct: t.ok,
+        avgSec: t.att ? t.ms / t.att / 1000 : undefined,
+      })),
+      slowest: slowest.map((o) => ({
+        question: o.i + 1, topic: o.q.topic, seconds: o.s.timeMs / 1000, correct: o.s.given === o.q.ans,
+      })),
+    };
+    try {
+      const review = await api.analyzePerformance(input);
+      setAiReview(review);
+      setAiState("done");
+    } catch {
+      setAiState("error");
+    }
+  }
+
+  if (aiState === "done" && aiReview) {
+    return <AiReview review={aiReview} paperTitle={paper.title} onBack={() => setAiState("idle")} />;
+  }
+
   function exportCsv() {
     const head = ["Q", "Section", "Topic", "Type", "Question", "Your answer", "Correct answer", "Result", "Seconds", "Solution"];
     const rows = paper.questions.map((q, i) => {
@@ -150,6 +181,27 @@ export default function Report({ result, onAgain }: Props) {
 
       <div className="reportBody">
         <div className="verdict">{verdict}</div>
+
+        {api.backendEnabled() && api.getSession() && (
+          <div className="aiCta">
+            <span className="aiCtaIcon">
+              <svg viewBox="0 0 24 24" width="22" height="22">
+                <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="#ffffff" />
+              </svg>
+            </span>
+            <div className="aiCtaText">
+              <b>Let AI review your performance</b>
+              <p>Powered by Gemini &mdash; a personalized breakdown of your weak areas and a study plan for next time.</p>
+            </div>
+            {aiState === "loading" ? (
+              <button className="aiCtaBtn" disabled>Reviewing&hellip;</button>
+            ) : aiState === "error" ? (
+              <button className="aiCtaBtn" onClick={requestAiReview}>Couldn&rsquo;t generate a review &mdash; retry</button>
+            ) : (
+              <button className="aiCtaBtn" onClick={requestAiReview}>Review my performance</button>
+            )}
+          </div>
+        )}
 
         <div className="statGrid">
           <div className="statCard hero">

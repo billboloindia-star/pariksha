@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     jwt_secret: str
+    gemini_api_key: str
     users_table: str = "pariksha-users-dev"
     attempts_table: str = "pariksha-attempts-dev"
     aws_region: str = "ap-south-1"
