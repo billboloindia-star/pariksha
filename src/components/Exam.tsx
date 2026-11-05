@@ -79,8 +79,11 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true, initi
   useEffect(() => {
     if (!exam.finished || doneRef.current) return;
     doneRef.current = true;
-    onFinish(buildResult(paper, exam.states, paper.durationMinutes * 60 - exam.remaining, exam.tabSwitches));
-  }, [exam.finished, exam.states, exam.remaining, exam.tabSwitches, paper, onFinish]);
+    // exam.remaining tracks the CURRENT section's countdown for sectional papers, not
+    // the overall exam's - deriving elapsed time from it is wrong once a second section
+    // starts. exam.elapsedSec is true wall-clock time since start, already pause-adjusted.
+    onFinish(buildResult(paper, exam.states, exam.elapsedSec, exam.tabSwitches));
+  }, [exam.finished, exam.states, exam.elapsedSec, exam.tabSwitches, paper, onFinish]);
 
   function commitDraft() {
     if (q.type === "mc") return;

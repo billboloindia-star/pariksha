@@ -55,8 +55,10 @@ export function useExam(
   );
   const [paused, setPaused] = useState(!!initialProgress);
 
-  const startedAt = useRef(Date.now());
-  const sectionStartedAt = useRef(Date.now());
+  // Seeded so that (Date.now() - startedAt.current) already equals the true elapsed
+  // time carried over from before a reload, instead of restarting the clock at 0.
+  const startedAt = useRef(Date.now() - (initialProgress?.elapsedBeforePause ?? 0) * 1000);
+  const sectionStartedAt = useRef(Date.now() - (initialProgress?.sectionElapsedBeforePause ?? 0) * 1000);
   const visitStart = useRef(Date.now());
   const idxRef = useRef(initialProgress?.idx ?? 0);
   const sectionRef = useRef(initialProgress?.sectionIdx ?? 0);
@@ -276,7 +278,11 @@ export function useExam(
   // covers capturing a fresh `remaining` right before an actual exit.
   useEffect(() => {
     if (finishedRef.current) return;
-    saveProgress({ idx, states, sectionIdx, lockedSections, tabSwitches, remaining });
+    saveProgress({
+      idx, states, sectionIdx, lockedSections, tabSwitches, remaining,
+      elapsedBeforePause: (Date.now() - startedAt.current) / 1000,
+      sectionElapsedBeforePause: (Date.now() - sectionStartedAt.current) / 1000,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, states, sectionIdx, lockedSections, tabSwitches, paused]);
 
@@ -290,6 +296,8 @@ export function useExam(
         lockedSections: lockedRef.current,
         tabSwitches: tabSwitchesRef.current,
         remaining: remainingRef.current,
+        elapsedBeforePause: (Date.now() - startedAt.current) / 1000,
+        sectionElapsedBeforePause: (Date.now() - sectionStartedAt.current) / 1000,
       });
     }
     function onVisibility() { if (document.hidden) saveNow(); }

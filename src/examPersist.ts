@@ -10,6 +10,9 @@ export interface ExamProgress {
   lockedSections: number[];
   tabSwitches: number;
   remaining: number;
+  /** True elapsed seconds so far (pause time excluded), overall and within the current section. */
+  elapsedBeforePause: number;
+  sectionElapsedBeforePause: number;
 }
 
 export interface PersistedPaper {
