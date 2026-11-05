@@ -5,9 +5,10 @@ interface Props {
   paper: Paper;
   onStart: () => void;
   onBack: () => void;
+  monitorTabSwitches?: boolean;
 }
 
-export default function Instructions({ paper, onStart, onBack }: Props) {
+export default function Instructions({ paper, onStart, onBack, monitorTabSwitches = true }: Props) {
   const [agreed, setAgreed] = useState(false);
   const mc = paper.questions.filter((q) => q.type === "mc").length;
   const totalMarks = paper.questions.length;
@@ -62,7 +63,7 @@ export default function Instructions({ paper, onStart, onBack }: Props) {
               className="btn primary"
               disabled={!agreed}
               onClick={() => {
-                document.documentElement.requestFullscreen?.().catch(() => {});
+                if (monitorTabSwitches) document.documentElement.requestFullscreen?.().catch(() => {});
                 onStart();
               }}
             >

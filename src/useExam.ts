@@ -25,7 +25,7 @@ export interface ExamApi {
   tabSwitches: number;
 }
 
-export function useExam(paper: Paper, onFinish: () => void): ExamApi {
+export function useExam(paper: Paper, onFinish: () => void, monitorTabSwitches = true): ExamApi {
   const total = paper.questions.length;
   const sectionTimed = paper.sections.some((s) => typeof s.minutes === "number" && (s.minutes ?? 0) > 0);
 
@@ -66,6 +66,7 @@ export function useExam(paper: Paper, onFinish: () => void): ExamApi {
   }, [onFinish]);
 
   useEffect(() => {
+    if (!monitorTabSwitches) return;
     const bump = () => {
       if (!finishedRef.current) setTabSwitches((n) => n + 1);
     };
@@ -77,7 +78,7 @@ export function useExam(paper: Paper, onFinish: () => void): ExamApi {
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
-  }, []);
+  }, [monitorTabSwitches]);
 
   const enterSection = useCallback(
     (si: number) => {

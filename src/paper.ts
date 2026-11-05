@@ -72,7 +72,6 @@ export function parsePaper(text: string): ParseResult {
   const title = String(obj.title ?? "Untitled paper");
   const exam = String(obj.exam ?? "General").trim() || "General";
   const duration = asNumber(obj.duration_minutes);
-  if (duration === null || duration <= 0) errors.push('"duration_minutes" is missing or not a positive number.');
   const neg = asNumber(obj.negative_marking);
 
   let sectionsRaw: RawSection[] = [];
@@ -107,7 +106,7 @@ export function parsePaper(text: string): ParseResult {
     paper: {
       title,
       exam,
-      durationMinutes: duration as number,
+      durationMinutes: duration && duration > 0 ? duration : 0,
       negativeMarking: neg === null ? 0.25 : neg,
       sections,
       questions,

@@ -6,6 +6,7 @@ import type { ExamResult, Paper, Status, TopicStat } from "../types";
 interface Props {
   paper: Paper;
   onFinish: (r: ExamResult) => void;
+  monitorTabSwitches?: boolean;
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -35,9 +36,9 @@ function candidateDisplayName(email: string): string {
     .join(" ");
 }
 
-export default function Exam({ paper, onFinish }: Props) {
+export default function Exam({ paper, onFinish, monitorTabSwitches = true }: Props) {
   const noop = useRef(() => {});
-  const exam = useExam(paper, noop.current);
+  const exam = useExam(paper, noop.current, monitorTabSwitches);
   const session = api.getSession();
   const candidateName = session ? candidateDisplayName(session.email) : "Guest candidate";
   const candidateInitials = (session ? candidateName : "G").slice(0, 2).toUpperCase();

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import Home from "./components/Home";
 import Login from "./components/Login";
+import Review from "./components/Review";
 import SystemCheck from "./components/SystemCheck";
 import Instructions from "./components/Instructions";
 import Exam from "./components/Exam";
@@ -9,16 +10,23 @@ import * as api from "./api";
 import type { ExamResult } from "./types";
 import type { Paper } from "./types";
 
-type Phase = "home" | "login" | "syscheck" | "instructions" | "exam" | "report";
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report";
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
   const [phase, setPhase] = useState<Phase>("home");
   const [paper, setPaper] = useState<Paper | null>(null);
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [monitorTabSwitches, setMonitorTabSwitches] = useState(true);
 
   const onLoaded = useCallback((p: Paper) => {
     setPaper(p);
+    setPhase("review");
+  }, []);
+
+  const onReviewConfirm = useCallback((p: Paper, monitor: boolean) => {
+    setPaper(p);
+    setMonitorTabSwitches(monitor);
     setPhase("syscheck");
   }, []);
 
@@ -49,13 +57,16 @@ export default function App() {
       {phase === "login" && (
         <Login onDone={(s) => { setSession(s); setPhase("home"); }} onBack={() => setPhase("home")} />
       )}
+      {phase === "review" && paper && (
+        <Review paper={paper} onBack={again} onConfirm={onReviewConfirm} />
+      )}
       {phase === "syscheck" && paper && (
         <SystemCheck paper={paper} onBack={again} onProceed={() => setPhase("instructions")} />
       )}
       {phase === "instructions" && paper && (
-        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} />
+        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} monitorTabSwitches={monitorTabSwitches} />
       )}
-      {phase === "exam" && paper && <Exam paper={paper} onFinish={onFinish} />}
+      {phase === "exam" && paper && <Exam paper={paper} onFinish={onFinish} monitorTabSwitches={monitorTabSwitches} />}
       {phase === "report" && result && <Report result={result} onAgain={again} />}
     </div>
   );
