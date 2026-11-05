@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Paper, QState, Status } from "./types";
+import type { ExamSettings, Paper, QState, Status } from "./types";
 import { statusOf } from "./types";
 import type { ExamProgress } from "./examPersist";
 import { clearInProgress, savePaper, saveProgress } from "./examPersist";
@@ -33,9 +33,10 @@ export interface ExamApi {
 export function useExam(
   paper: Paper,
   onFinish: () => void,
-  monitorTabSwitches = true,
+  settings: ExamSettings,
   initialProgress?: ExamProgress
 ): ExamApi {
+  const monitorTabSwitches = settings.monitorTabSwitches;
   const total = paper.questions.length;
   const sectionTimed = paper.sections.some((s) => typeof s.minutes === "number" && (s.minutes ?? 0) > 0);
 
@@ -269,7 +270,7 @@ export function useExam(
   // write the (static) paper once, at the start of a fresh attempt only - a
   // hydrated/resumed attempt already has it persisted.
   useEffect(() => {
-    if (!initialProgress) savePaper({ paper, monitorTabSwitches });
+    if (!initialProgress) savePaper({ paper, settings });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

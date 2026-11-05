@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useExam } from "../useExam";
 import * as api from "../api";
-import type { ExamResult, Paper, Status, TopicStat } from "../types";
+import type { ExamResult, ExamSettings, Paper, Status, TopicStat } from "../types";
 import type { ExamProgress } from "../examPersist";
+import LaggyCursor from "./LaggyCursor";
 
 interface Props {
   paper: Paper;
   onFinish: (r: ExamResult) => void;
-  monitorTabSwitches?: boolean;
+  settings: ExamSettings;
   initialProgress?: ExamProgress;
   onDiscard?: () => void;
 }
@@ -39,9 +40,10 @@ function candidateDisplayName(email: string): string {
     .join(" ");
 }
 
-export default function Exam({ paper, onFinish, monitorTabSwitches = true, initialProgress, onDiscard }: Props) {
+export default function Exam({ paper, onFinish, settings, initialProgress, onDiscard }: Props) {
+  const { monitorTabSwitches, simulateZoom, simulateLaggyCursor } = settings;
   const noop = useRef(() => {});
-  const exam = useExam(paper, noop.current, monitorTabSwitches, initialProgress);
+  const exam = useExam(paper, noop.current, settings, initialProgress);
   const session = api.getSession();
   const candidateName = session ? candidateDisplayName(session.email) : "Guest candidate";
   const candidateInitials = (session ? candidateName : "G").slice(0, 2).toUpperCase();
@@ -133,8 +135,8 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true, initi
     return () => window.removeEventListener("keydown", onKey);
   }, [q, exam]);
 
-  return (
-    <div className="examWrap">
+  const examUi = (
+    <div className={`examWrap ${simulateLaggyCursor ? "laggyCursorActive" : ""}`}>
       <header className="examBar">
         <div className="examBarLeft">
           <span className="examTitle">{paper.title}</span>
@@ -363,6 +365,24 @@ export default function Exam({ paper, onFinish, monitorTabSwitches = true, initi
         </div>
       )}
     </div>
+  );
+
+  if (simulateZoom) {
+    return (
+      <div className="examMonitorFrame">
+        <div className="examMonitorBox">
+          <div className="examZoomInner">{examUi}</div>
+        </div>
+        {simulateLaggyCursor && <LaggyCursor />}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {examUi}
+      {simulateLaggyCursor && <LaggyCursor />}
+    </>
   );
 }
 

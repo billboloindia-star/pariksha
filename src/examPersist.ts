@@ -1,4 +1,4 @@
-import type { Paper, QState } from "./types";
+import type { ExamSettings, Paper, QState } from "./types";
 
 const PAPER_KEY = "exam_app_inprogress_paper";
 const PROGRESS_KEY = "exam_app_inprogress_progress";
@@ -17,12 +17,12 @@ export interface ExamProgress {
 
 export interface PersistedPaper {
   paper: Paper;
-  monitorTabSwitches: boolean;
+  settings: ExamSettings;
 }
 
 /** An exit from the exam screen — pause, reload, or closing the tab — is always
  * recoverable from exactly where it left off; the clock never runs while away. */
-export function loadInProgress(): { paper: Paper; monitorTabSwitches: boolean; progress: ExamProgress } | null {
+export function loadInProgress(): { paper: Paper; settings: ExamSettings; progress: ExamProgress } | null {
   try {
     const paperRaw = localStorage.getItem(PAPER_KEY);
     const progressRaw = localStorage.getItem(PROGRESS_KEY);
@@ -30,7 +30,7 @@ export function loadInProgress(): { paper: Paper; monitorTabSwitches: boolean; p
     const saved = JSON.parse(paperRaw) as PersistedPaper;
     const progress = JSON.parse(progressRaw) as ExamProgress;
     if (!saved?.paper || !progress) return null;
-    return { paper: saved.paper, monitorTabSwitches: saved.monitorTabSwitches, progress };
+    return { paper: saved.paper, settings: saved.settings, progress };
   } catch {
     return null;
   }

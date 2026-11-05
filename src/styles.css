@@ -135,6 +135,15 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   .convertStep:first-child{border-top:none}
 }
 
+/* ---------- exam-center realism simulation ---------- */
+.examMonitorFrame{position:fixed;inset:0;background:#171c26;display:flex;align-items:center;justify-content:center;z-index:5;padding:28px}
+.examMonitorBox{width:min(1180px,94vw);height:min(760px,90vh);background:var(--bg);border:10px solid #0b0e14;border-radius:10px;box-shadow:0 40px 90px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.04);overflow:auto;position:relative}
+.examZoomInner{zoom:1.28}
+.examMonitorBox .examWrap{height:100%;min-height:600px}
+
+.laggyCursorDot{position:fixed;top:0;left:0;width:22px;height:22px;margin:-3px 0 0 -3px;pointer-events:none;z-index:999;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.laggyCursorActive,.laggyCursorActive *{cursor:none!important}
+
 /* ---------- exam chrome ---------- */
 .examWrap{height:100vh;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
 .report{min-height:100vh}
@@ -256,6 +265,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .cardIcon{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:10px}
 .cardIcon.blue{background:#e7eff7;color:var(--blue)}
 .cardIcon.purple{background:#f5f0fb;color:var(--purple)}
+.cardIcon.green{background:#e9f6ef;color:var(--green)}
 
 .reviewSectionRow{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--line)}
 .reviewSectionRow:last-child{border-bottom:none}

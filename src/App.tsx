@@ -8,12 +8,14 @@ import Exam from "./components/Exam";
 import Report from "./components/Report";
 import PastAttempts from "./components/PastAttempts";
 import * as api from "./api";
-import type { ExamResult } from "./types";
+import type { ExamResult, ExamSettings } from "./types";
 import type { Paper } from "./types";
 import { clearInProgress, loadInProgress } from "./examPersist";
 import type { ExamProgress } from "./examPersist";
 
 type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past";
+
+const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false };
 
 export default function App() {
   const [session, setSession] = useState<api.Session | null>(() => api.getSession());
@@ -21,7 +23,7 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>(resumed ? "exam" : "home");
   const [paper, setPaper] = useState<Paper | null>(resumed?.paper ?? null);
   const [result, setResult] = useState<ExamResult | null>(null);
-  const [monitorTabSwitches, setMonitorTabSwitches] = useState(resumed?.monitorTabSwitches ?? true);
+  const [examSettings, setExamSettings] = useState<ExamSettings>(resumed?.settings ?? DEFAULT_SETTINGS);
   const [initialProgress] = useState<ExamProgress | undefined>(resumed?.progress);
 
   const onLoaded = useCallback((p: Paper) => {
@@ -29,9 +31,9 @@ export default function App() {
     setPhase("review");
   }, []);
 
-  const onReviewConfirm = useCallback((p: Paper, monitor: boolean) => {
+  const onReviewConfirm = useCallback((p: Paper, settings: ExamSettings) => {
     setPaper(p);
-    setMonitorTabSwitches(monitor);
+    setExamSettings(settings);
     setPhase("syscheck");
   }, []);
 
@@ -71,13 +73,13 @@ export default function App() {
         <SystemCheck paper={paper} onBack={again} onProceed={() => setPhase("instructions")} />
       )}
       {phase === "instructions" && paper && (
-        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} monitorTabSwitches={monitorTabSwitches} />
+        <Instructions paper={paper} onBack={again} onStart={() => setPhase("exam")} monitorTabSwitches={examSettings.monitorTabSwitches} />
       )}
       {phase === "exam" && paper && (
         <Exam
           paper={paper}
           onFinish={onFinish}
-          monitorTabSwitches={monitorTabSwitches}
+          settings={examSettings}
           initialProgress={initialProgress}
           onDiscard={initialProgress ? () => { clearInProgress(); again(); } : undefined}
         />

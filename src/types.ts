@@ -168,3 +168,13 @@ export interface AiReview {
   weaknesses: ReviewPoint[];
   plan: StudyPlanDay[];
 }
+
+export interface ExamSettings {
+  monitorTabSwitches: boolean;
+  /** Renders the exam inside a small fixed "monitor" box, scaled up, so you must
+   * scroll to see everything — like a real exam-center kiosk display. */
+  simulateZoom: boolean;
+  /** Replaces the cursor with one that eases toward the real pointer with a lag,
+   * for practicing precise clicks on a sluggish exam-center mouse. */
+  simulateLaggyCursor: boolean;
+}

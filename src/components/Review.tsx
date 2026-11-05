@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { Paper, Question, SectionInfo } from "../types";
+import type { ExamSettings, Paper, Question, SectionInfo } from "../types";
 import Logo from "./Logo";
 
 interface Props {
   paper: Paper;
-  onConfirm: (paper: Paper, monitorTabSwitches: boolean) => void;
+  onConfirm: (paper: Paper, settings: ExamSettings) => void;
   onBack: () => void;
 }
 
@@ -23,6 +23,15 @@ function ListIcon() {
     <svg viewBox="0 0 24 24" width="18" height="18">
       <path d="M4 7h3M4 12h3M4 17h3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
       <path d="M10 7h10M10 12h10M10 17h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MonitorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18">
+      <rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M9 20h6M12 16v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -49,6 +58,8 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
   const [sectionNames, setSectionNames] = useState(paper.sections.map((s) => s.name));
   const [order, setOrder] = useState(paper.sections.map((_, i) => i));
   const [monitorTabSwitches, setMonitorTabSwitches] = useState(true);
+  const [simulateZoom, setSimulateZoom] = useState(false);
+  const [simulateLaggyCursor, setSimulateLaggyCursor] = useState(false);
   const [error, setError] = useState("");
 
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -153,7 +164,7 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
       questions: newQuestions,
       sections: newSections,
     };
-    onConfirm(updated, monitorTabSwitches);
+    onConfirm(updated, { monitorTabSwitches, simulateZoom, simulateLaggyCursor });
   }
 
   return (
@@ -285,6 +296,33 @@ export default function Review({ paper, onConfirm, onBack }: Props) {
           })}
         </section>
       </div>
+
+      <section className="card">
+        <div className="cardIconRow">
+          <span className="cardIcon green"><MonitorIcon /></span>
+          <h2>Exam-center realism</h2>
+        </div>
+        <p className="muted small">
+          Off by default &mdash; turn these on only when you specifically want to practice the
+          friction of a real exam-center kiosk, not for every paper.
+        </p>
+        <label className="reviewCheckRow">
+          <input
+            type="checkbox"
+            checked={simulateZoom}
+            onChange={(e) => setSimulateZoom(e.target.checked)}
+          />
+          <span>Simulate exam-center zoom &mdash; a small, scaled-up screen you must scroll within</span>
+        </label>
+        <label className="reviewCheckRow">
+          <input
+            type="checkbox"
+            checked={simulateLaggyCursor}
+            onChange={(e) => setSimulateLaggyCursor(e.target.checked)}
+          />
+          <span>Simulate a laggy mouse &mdash; practice landing clicks precisely</span>
+        </label>
+      </section>
 
       {error && <pre className="error">{error}</pre>}
 
