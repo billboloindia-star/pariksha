@@ -812,7 +812,8 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 
 .ibpsInstrFoot{border-top:1px solid var(--line);padding:18px 30px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .ibpsLangRow{font-size:13px;display:flex;align-items:center;gap:8px}
-.ibpsLangRow select{padding:6px 10px;border:1px solid var(--line-2);border-radius:7px;font-size:13px}
+.ibpsLangRow select{padding:6px 10px;border:1px solid var(--line-2);border-radius:7px;font-size:13px;outline:none}
+.ibpsLangRow select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(43,108,223,.15)}
 .ibpsDeclareRow{display:flex;gap:10px;font-size:12.5px;color:var(--dim);align-items:flex-start;max-width:680px}
 .ibpsDeclareRow input{margin-top:3px}
 .ibpsInstrBtns{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 30px;border-top:1px solid var(--line)}
