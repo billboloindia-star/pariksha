@@ -72,7 +72,14 @@ export function parseYaml(src: string): unknown {
     const style = blockScalarStyle(val);
     if (style) return parseBlockScalar(style, indent);
     if (val === "") {
-      return pos < lines.length && lines[pos].ind > indent ? parseBlock(lines[pos].ind) : null;
+      if (pos >= lines.length) return null;
+      const next = lines[pos];
+      if (next.ind > indent) return parseBlock(next.ind);
+      /* A block sequence is allowed to sit at the SAME indent as its parent
+         key, e.g. "sections:" followed by "- name: ..." at column 0 — don't
+         mistake that for "no value". */
+      if (next.ind === indent && (next.text.slice(0, 2) === "- " || next.text === "-")) return parseBlock(next.ind);
+      return null;
     }
     return parseScalar(val);
   }
@@ -108,7 +115,16 @@ export function parseYaml(src: string): unknown {
           const k0 = rest.slice(0, ci).trim().replace(/^["']|["']$/g, "");
           const v0 = rest.slice(ci + 1).trim();
           obj[k0] = resolveValue(v0, indent);
-          while (pos < lines.length && lines[pos].ind > indent && lines[pos].text.slice(0, 2) !== "- ") {
+          /* Sibling keys of a list-item mapping should be indented past the
+             dash, but some AI output instead aligns them flush with the dash
+             (e.g. "- name: X" followed by "questions:" at the same column).
+             Accept that too — only a new "- " at this exact column ends the
+             item. */
+          while (
+            pos < lines.length &&
+            lines[pos].ind >= indent &&
+            !(lines[pos].ind === indent && (lines[pos].text.slice(0, 2) === "- " || lines[pos].text === "-"))
+          ) {
             putKV(obj, lines[pos].text, lines[pos].ind);
           }
           arr.push(obj);
