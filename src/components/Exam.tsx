@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useExam } from "../useExam";
+import { useExam } from "../../shared/useExam";
 import * as api from "../../shared/api";
 import type { ExamResult, ExamSettings, Paper, Status } from "../../shared/types";
 import type { ExamProgress } from "../../shared/examPersist";
 import { buildResult } from "../../shared/scoring";
+import { webExamPlatform } from "../examPlatform";
 import LaggyCursor from "./LaggyCursor";
 
 interface Props {
@@ -44,7 +45,7 @@ function candidateDisplayName(email: string): string {
 export default function Exam({ paper, onFinish, settings, initialProgress, onDiscard }: Props) {
   const { monitorTabSwitches, simulateZoom, simulateLaggyCursor, examCenterSkin: ibps } = settings;
   const noop = useRef(() => {});
-  const exam = useExam(paper, noop.current, settings, initialProgress);
+  const exam = useExam(paper, noop.current, settings, webExamPlatform, initialProgress);
   const session = api.getSession();
   const candidateName = session ? candidateDisplayName(session.email) : "Guest candidate";
   const candidateInitials = (session ? candidateName : "G").slice(0, 2).toUpperCase();

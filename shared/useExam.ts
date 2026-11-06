@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExamSettings, Paper, QState, Status } from "../shared/types";
-import { statusOf } from "../shared/types";
-import type { ExamProgress } from "../shared/examPersist";
-import { clearInProgress, savePaper, saveProgress } from "../shared/examPersist";
+import type { ExamSettings, Paper, QState, Status } from "./types";
+import { statusOf } from "./types";
+import type { ExamProgress } from "./examPersist";
+import { clearInProgress, savePaper, saveProgress } from "./examPersist";
+import type { ExamPlatform } from "./examPlatform";
 
 export interface ExamApi {
   paper: Paper;
@@ -38,6 +39,7 @@ export function useExam(
   paper: Paper,
   onFinish: () => void,
   settings: ExamSettings,
+  platform: ExamPlatform,
   initialProgress?: ExamProgress
 ): ExamApi {
   const monitorTabSwitches = settings.monitorTabSwitches;
@@ -95,24 +97,17 @@ export function useExam(
     finishedRef.current = true;
     setFinished(true);
     clearInProgress();
-    document.exitFullscreen?.().catch(() => {});
+    platform.cleanupOnFinish();
     onFinish();
-  }, [onFinish]);
+  }, [onFinish, platform]);
 
   useEffect(() => {
     if (!monitorTabSwitches) return;
     const bump = () => {
       if (!finishedRef.current && !pausedRef.current) setTabSwitches((n) => n + 1);
     };
-    const onVisibility = () => { if (document.hidden) bump(); };
-    const onFullscreenChange = () => { if (!document.fullscreenElement) bump(); };
-    document.addEventListener("visibilitychange", onVisibility);
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      document.removeEventListener("fullscreenchange", onFullscreenChange);
-    };
-  }, [monitorTabSwitches]);
+    return platform.onAway(bump);
+  }, [monitorTabSwitches, platform]);
 
   const enterSection = useCallback(
     (si: number) => {
@@ -126,7 +121,7 @@ export function useExam(
   );
 
   useEffect(() => {
-    const t = window.setInterval(() => {
+    const t = setInterval(() => {
       if (finishedRef.current || pausedRef.current) return;
       if (sectionTimed) {
         const sec = paper.sections[sectionRef.current];
@@ -159,7 +154,7 @@ export function useExam(
         if (left <= 0) finish();
       }
     }, 250);
-    return () => window.clearInterval(t);
+    return () => clearInterval(t);
   }, [paper.durationMinutes, paper.sections, sectionTimed, enterSection, finish]);
 
   const flushTime = useCallback(() => {
@@ -210,14 +205,8 @@ export function useExam(
       setOffline(false);
       if (!finishedRef.current && pausedRef.current) resume();
     }
-    if (typeof navigator !== "undefined" && navigator.onLine === false) onOffline();
-    window.addEventListener("offline", onOffline);
-    window.addEventListener("online", onOnline);
-    return () => {
-      window.removeEventListener("offline", onOffline);
-      window.removeEventListener("online", onOnline);
-    };
-  }, [pause, resume]);
+    return platform.onConnectivity((online) => (online ? onOnline() : onOffline()));
+  }, [pause, resume, platform]);
 
   const setIdx = useCallback(
     (i: number) => {
@@ -334,16 +323,9 @@ export function useExam(
         sectionElapsedBeforePause: (Date.now() - sectionStartedAt.current) / 1000,
       });
     }
-    function onVisibility() { if (document.hidden) saveNow(); }
-    window.addEventListener("pagehide", saveNow);
-    window.addEventListener("beforeunload", saveNow);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pagehide", saveNow);
-      window.removeEventListener("beforeunload", saveNow);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
+    return platform.onWillExit(saveNow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform]);
 
   return {
     paper, states, idx, remaining, sectionIdx, sectionTimed, lockedSections, finished,
