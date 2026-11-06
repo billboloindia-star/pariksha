@@ -42,6 +42,7 @@ Brainstormed feature backlog. Tick a box once a feature is actually built and de
 - [ ] Lightweight proctoring flags (face-presence + audio, client-side only)
 - [ ] Randomized "invigilator walk-by" interruptions
 - [ ] CAT-style adaptive difficulty
+- [ ] Advanced config: optional sub-topic timers nested inside a section (e.g. cap time on just the Syllogism questions within Reasoning), on top of the strict broad-section grouping used by the AI conversion prompt
 
 ## 5. Session/accessibility
 - [ ] Pomodoro-style break prompts on long papers
