@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LibraryFileLink, LibraryItem, Paper } from "../types";
 import { parsePaper } from "../paper";
-import { aiConversionPrompt } from "../aiPrompt";
+import { aiConversionPrompt, aiConversionPromptWithLinks } from "../aiPrompt";
 import * as api from "../api";
 
 interface Props {
@@ -95,7 +95,8 @@ export default function Library({ onLoaded }: Props) {
 
   async function copyPrompt() {
     try {
-      await navigator.clipboard.writeText(aiConversionPrompt);
+      const text = fileLinks ? aiConversionPromptWithLinks(fileLinks) : aiConversionPrompt;
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -179,10 +180,13 @@ export default function Library({ onLoaded }: Props) {
               </button>
               <button className="btn" onClick={() => setShowPrompt((v) => !v)}>{showPrompt ? "Hide" : "Show"} the prompt</button>
             </div>
-            {showPrompt && <pre className="promptPreview">{aiConversionPrompt}</pre>}
+            {showPrompt && (
+              <pre className="promptPreview">{fileLinks ? aiConversionPromptWithLinks(fileLinks) : aiConversionPrompt}</pre>
+            )}
             <p className="muted small">
-              Paste the prompt into ChatGPT, Gemini, or Claude along with the file(s) above, then
-              paste what it hands back on the right.
+              {fileLinks
+                ? "This prompt now includes a direct link to your file(s) — paste it into a web-enabled ChatGPT, Gemini, or Claude and it'll fetch the file itself, no manual attaching needed. Then paste what it hands back on the right."
+                : "Paste the prompt into ChatGPT, Gemini, or Claude along with the file(s) above, then paste what it hands back on the right."}
             </p>
           </section>
 

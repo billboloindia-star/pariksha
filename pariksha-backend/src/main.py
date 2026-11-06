@@ -196,7 +196,7 @@ def library_file_links(item_id: str, email: str = Depends(get_current_email)):
     for f in item.get("files", []):
         key = _library_key(email, item_id, f["fileName"])
         url = s3.generate_presigned_url(
-            "get_object", Params={"Bucket": settings.library_bucket, "Key": key}, ExpiresIn=300
+            "get_object", Params={"Bucket": settings.library_bucket, "Key": key}, ExpiresIn=1800
         )
         links.append({"fileName": f["fileName"], "url": url})
     return links
