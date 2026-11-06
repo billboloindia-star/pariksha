@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExamSettings, Paper, QState, Status } from "./types";
-import { statusOf } from "./types";
-import type { ExamProgress } from "./examPersist";
-import { clearInProgress, savePaper, saveProgress } from "./examPersist";
+import type { ExamSettings, Paper, QState, Status } from "../shared/types";
+import { statusOf } from "../shared/types";
+import type { ExamProgress } from "../shared/examPersist";
+import { clearInProgress, savePaper, saveProgress } from "../shared/examPersist";
 
 export interface ExamApi {
   paper: Paper;

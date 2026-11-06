@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { ExamSettings, Paper } from "../types";
-import * as api from "../api";
+import type { ExamSettings, Paper } from "../../shared/types";
+import * as api from "../../shared/api";
 
 interface Props {
   paper: Paper;

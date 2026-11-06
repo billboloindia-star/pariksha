@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from "react";
-import * as api from "../api";
+import * as api from "../../shared/api";
 import Logo from "./Logo";
 
 export type HubPhase = "home" | "past" | "library" | "insights";

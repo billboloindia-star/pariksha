@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { parsePaper } from "../paper";
-import type { AttemptRecord, Paper } from "../types";
+import { parsePaper } from "../../shared/paper";
+import type { AttemptRecord, Paper } from "../../shared/types";
 import demoPaper from "../../demo_paper.yml?raw";
 import demoPaperJee from "../../demo_paper_jee.yml?raw";
-import { aiConversionPrompt } from "../aiPrompt";
-import * as api from "../api";
-import { loadHistory } from "../history";
+import { aiConversionPrompt } from "../../shared/aiPrompt";
+import * as api from "../../shared/api";
+import { loadHistory } from "../../shared/history";
 import { computeStreak } from "./Sidebar";
 
 interface Props {

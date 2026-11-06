@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AttemptRecord } from "../types";
-import * as api from "../api";
+import type { AttemptRecord } from "../../shared/types";
+import * as api from "../../shared/api";
 
 function secs(ms: number) {
   const s = ms / 1000;

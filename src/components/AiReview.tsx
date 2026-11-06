@@ -1,4 +1,4 @@
-import type { AiReview as AiReviewData } from "../types";
+import type { AiReview as AiReviewData } from "../../shared/types";
 
 interface Props {
   review: AiReviewData;

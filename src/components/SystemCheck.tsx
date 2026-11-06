@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Paper } from "../types";
+import type { Paper } from "../../shared/types";
 
 interface Props {
   paper: Paper;

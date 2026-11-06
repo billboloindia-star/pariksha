@@ -1,7 +1,15 @@
 import type { AttemptRecord, AiReview, LibraryFileLink, LibraryItem, Paper, PerformanceInput } from "./types";
+import { getStorage } from "./storage";
 
-const API_URL = import.meta.env.VITE_API_URL as string | undefined;
 const SESSION_KEY = "pariksha_session";
+
+let API_URL: string | undefined;
+
+/** Call once at app startup (web: pass import.meta.env.VITE_API_URL; RN: pass
+ * whatever env/config mechanism that platform uses). */
+export function configureApi(apiUrl: string | undefined): void {
+  API_URL = apiUrl;
+}
 
 export interface Session { token: string; email: string }
 
@@ -11,7 +19,7 @@ export function backendEnabled(): boolean {
 
 export function getSession(): Session | null {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = getStorage().getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as Session) : null;
   } catch {
     return null;
@@ -20,8 +28,8 @@ export function getSession(): Session | null {
 
 export function setSession(s: Session | null): void {
   try {
-    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    else localStorage.removeItem(SESSION_KEY);
+    if (s) getStorage().setItem(SESSION_KEY, JSON.stringify(s));
+    else getStorage().removeItem(SESSION_KEY);
   } catch { /* storage may be blocked */ }
 }
 

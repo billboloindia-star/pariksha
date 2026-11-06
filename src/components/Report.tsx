@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AiReview as AiReviewData, AttemptQuestionRecord, AttemptRecord, ExamResult, PerformanceInput, Question } from "../types";
+import type { AiReview as AiReviewData, AttemptQuestionRecord, AttemptRecord, ExamResult, PerformanceInput, Question } from "../../shared/types";
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
 import AiReview from "./AiReview";
 import ScoreDonut from "./ScoreDonut";
 import TopicBars from "./TopicBars";
-import * as api from "../api";
-import { HISTORY_KEY, loadLocalHistory } from "../history";
+import * as api from "../../shared/api";
+import { loadLocalHistory, saveLocalHistory } from "../../shared/history";
 
 interface Props {
   result: ExamResult;
@@ -69,7 +69,7 @@ export default function Report({ result, onAgain }: Props) {
     let local: AttemptRecord[] = [];
     try {
       local = [rec, ...loadLocalHistory()].slice(0, 10);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(local));
+      saveLocalHistory(local);
     } catch { /* storage may be blocked */ }
     setHistory(local);
 

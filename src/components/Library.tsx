@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { LibraryFileLink, LibraryItem, Paper } from "../types";
-import { parsePaper } from "../paper";
-import { aiConversionPrompt, aiConversionPromptWithLinks } from "../aiPrompt";
-import * as api from "../api";
+import type { LibraryFileLink, LibraryItem, Paper } from "../../shared/types";
+import { parsePaper } from "../../shared/paper";
+import { aiConversionPrompt, aiConversionPromptWithLinks } from "../../shared/aiPrompt";
+import * as api from "../../shared/api";
 
 interface Props {
   onLoaded: (p: Paper) => void;

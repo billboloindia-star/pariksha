@@ -1,4 +1,5 @@
 import type { ExamSettings, Paper, QState } from "./types";
+import { getStorage } from "./storage";
 
 const PAPER_KEY = "exam_app_inprogress_paper";
 const PROGRESS_KEY = "exam_app_inprogress_progress";
@@ -24,8 +25,8 @@ export interface PersistedPaper {
  * recoverable from exactly where it left off; the clock never runs while away. */
 export function loadInProgress(): { paper: Paper; settings: ExamSettings; progress: ExamProgress } | null {
   try {
-    const paperRaw = localStorage.getItem(PAPER_KEY);
-    const progressRaw = localStorage.getItem(PROGRESS_KEY);
+    const paperRaw = getStorage().getItem(PAPER_KEY);
+    const progressRaw = getStorage().getItem(PROGRESS_KEY);
     if (!paperRaw || !progressRaw) return null;
     const saved = JSON.parse(paperRaw) as PersistedPaper;
     const progress = JSON.parse(progressRaw) as ExamProgress;
@@ -38,19 +39,19 @@ export function loadInProgress(): { paper: Paper; settings: ExamSettings; progre
 
 export function savePaper(p: PersistedPaper) {
   try {
-    localStorage.setItem(PAPER_KEY, JSON.stringify(p));
+    getStorage().setItem(PAPER_KEY, JSON.stringify(p));
   } catch { /* storage may be blocked or full */ }
 }
 
 export function saveProgress(p: ExamProgress) {
   try {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+    getStorage().setItem(PROGRESS_KEY, JSON.stringify(p));
   } catch { /* storage may be blocked or full */ }
 }
 
 export function clearInProgress() {
   try {
-    localStorage.removeItem(PAPER_KEY);
-    localStorage.removeItem(PROGRESS_KEY);
+    getStorage().removeItem(PAPER_KEY);
+    getStorage().removeItem(PROGRESS_KEY);
   } catch { /* ignore */ }
 }

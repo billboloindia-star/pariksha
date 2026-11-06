@@ -12,11 +12,11 @@ import Report from "./components/Report";
 import PastAttempts from "./components/PastAttempts";
 import Library from "./components/Library";
 import Insights from "./components/Insights";
-import * as api from "./api";
-import type { ExamResult, ExamSettings } from "./types";
-import type { Paper } from "./types";
-import { clearInProgress, loadInProgress } from "./examPersist";
-import type { ExamProgress } from "./examPersist";
+import * as api from "../shared/api";
+import type { ExamResult, ExamSettings } from "../shared/types";
+import type { Paper } from "../shared/types";
+import { clearInProgress, loadInProgress } from "../shared/examPersist";
+import type { ExamProgress } from "../shared/examPersist";
 
 type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "past" | "library" | "insights";
 const HUB_PHASES: Phase[] = ["home", "past", "library", "insights"];

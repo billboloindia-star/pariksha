@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubPhase } from "./Sidebar";
 import { LogoutIcon, hubItems, initials } from "./Sidebar";
-import * as api from "../api";
+import * as api from "../../shared/api";
 import Logo from "./Logo";
 
 interface Props {

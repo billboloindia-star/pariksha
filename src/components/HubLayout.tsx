@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { HubPhase } from "./Sidebar";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
-import * as api from "../api";
+import * as api from "../../shared/api";
 
 interface Props {
   active: HubPhase;

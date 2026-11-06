@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ExamSettings, Paper, Question, SectionInfo } from "../types";
+import type { ExamSettings, Paper, Question, SectionInfo } from "../../shared/types";
 import Logo from "./Logo";
 
 interface Props {

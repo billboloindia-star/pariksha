@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import type { AiReview as AiReviewData, AttemptRecord, PerformanceInput } from "../types";
-import { loadHistory } from "../history";
+import type { AiReview as AiReviewData, AttemptRecord, PerformanceInput } from "../../shared/types";
+import { loadHistory } from "../../shared/history";
 import ScoreDonut from "./ScoreDonut";
 import TopicBars from "./TopicBars";
 import type { TopicBarRow } from "./TopicBars";
 import AiReview from "./AiReview";
 import Logo from "./Logo";
-import * as api from "../api";
+import * as api from "../../shared/api";
 
 
 function fmt(s: number) {
