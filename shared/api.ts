@@ -1,7 +1,7 @@
 import type { AttemptRecord, AiReview, LibraryFileLink, LibraryItem, Paper, PerformanceInput } from "./types";
 import { getStorage } from "./storage";
 
-const SESSION_KEY = "pariksha_session";
+export const SESSION_KEY = "pariksha_session";
 
 let API_URL: string | undefined;
 

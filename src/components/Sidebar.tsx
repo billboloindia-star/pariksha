@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import * as api from "../../shared/api";
+import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
 export type HubPhase = "home" | "past" | "library" | "insights";
@@ -17,18 +18,7 @@ export function initials(email: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase();
 }
 
-export function computeStreak(whens: number[]): number {
-  if (whens.length === 0) return 0;
-  const days = new Set(whens.map((w) => new Date(w).toDateString()));
-  const cursor = new Date();
-  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
-  let streak = 0;
-  while (days.has(cursor.toDateString())) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
+export { computeStreak };
 
 export function HomeIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 11.5L12 4l8 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;

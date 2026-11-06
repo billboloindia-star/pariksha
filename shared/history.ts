@@ -30,3 +30,16 @@ export async function loadHistory(): Promise<AttemptRecord[]> {
   }
   return local;
 }
+
+export function computeStreak(whens: number[]): number {
+  if (whens.length === 0) return 0;
+  const days = new Set(whens.map((w) => new Date(w).toDateString()));
+  const cursor = new Date();
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (days.has(cursor.toDateString())) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
