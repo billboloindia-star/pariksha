@@ -618,25 +618,60 @@ export default function TargetExam({ onPracticeTopic }: Props) {
           </div>
 
           <div className="texCard">
-            <h2 className="texCardH2">What you'll actually practice</h2>
-            <p className="texCardSub">Every real topic this plan covers, grouped by section — not an abstract percentage split.</p>
-            {focusTopicsBySection.length === 0 ? (
-              <p className="texFieldHint">This plan is revision + mocks only — no new topics to list.</p>
+            {generatedPlan.topicContract?.length ? (
+              <>
+                <h2 className="texCardH2">Your topic contract</h2>
+                <p className="texCardSub">
+                  Computed server-side from {selectedExam}'s real PYQ-based exam pattern and your own weak-topic / confidence
+                  state — not the AI's own guess. This is exactly what the plan below is built around.
+                </p>
+                <div className="texContractGroups">
+                  {generatedPlan.topicContract.map((sec, i) => (
+                    <div key={sec.section} className="texContractSection">
+                      <div className="texFocusGroupHead">
+                        <span className="texFocusGroupDot" style={{ background: FOCUS_COLORS[sec.section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
+                        <span className="texFocusGroupName">{sec.section}</span>
+                      </div>
+                      {sec.buckets.map((b) => (
+                        <div key={b.label} className="texContractBucket">
+                          <div className="texContractBucketHead">
+                            <span className="texContractBucketLabel">{b.label}</span>
+                            <span className="texContractBucketWeight">real exam weight: {b.weightNote}</span>
+                          </div>
+                          <div className="texFocusChips">
+                            {b.chapters.map((c) => (
+                              <span key={c.chapter} className="texFocusChip" title={c.reason}>{c.chapter}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="texFocusGroups">
-                {focusTopicsBySection.map(({ section, topics }, i) => (
-                  <div key={section} className="texFocusGroup">
-                    <div className="texFocusGroupHead">
-                      <span className="texFocusGroupDot" style={{ background: FOCUS_COLORS[section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
-                      <span className="texFocusGroupName">{section}</span>
-                      <span className="texFocusGroupCount">{topics.length} topic{topics.length === 1 ? "" : "s"}</span>
-                    </div>
-                    <div className="texFocusChips">
-                      {topics.map((t) => <span key={t} className="texFocusChip">{t}</span>)}
-                    </div>
+              <>
+                <h2 className="texCardH2">What you'll actually practice</h2>
+                <p className="texCardSub">Every real topic this plan covers, grouped by section — not an abstract percentage split.</p>
+                {focusTopicsBySection.length === 0 ? (
+                  <p className="texFieldHint">This plan is revision + mocks only — no new topics to list.</p>
+                ) : (
+                  <div className="texFocusGroups">
+                    {focusTopicsBySection.map(({ section, topics }, i) => (
+                      <div key={section} className="texFocusGroup">
+                        <div className="texFocusGroupHead">
+                          <span className="texFocusGroupDot" style={{ background: FOCUS_COLORS[section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
+                          <span className="texFocusGroupName">{section}</span>
+                          <span className="texFocusGroupCount">{topics.length} topic{topics.length === 1 ? "" : "s"}</span>
+                        </div>
+                        <div className="texFocusChips">
+                          {topics.map((t) => <span key={t} className="texFocusChip">{t}</span>)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
 

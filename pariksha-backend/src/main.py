@@ -51,6 +51,9 @@ from src.models import (
     TargetExamPhase,
     TargetExamPlan,
     TargetExamState,
+    TopicContractBucket,
+    TopicContractChapter,
+    TopicContractSection,
     TargetExamTask,
     TopicCandidate,
     TopicConfirmRequest,
@@ -933,7 +936,7 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
     days_until = max(1, (exam_date - date.today()).days)
 
     try:
-        out = _planner.generate(ExamPlanInput(
+        out, contract = _planner.generate(ExamPlanInput(
             exam=body.exam, stage=body.stage, daysUntilExam=days_until,
             targetCutoff=body.targetCutoff, currentAvgAccuracy=current_avg,
             weakTopics=weak, chaptersBySection=chapters_by_section,
@@ -941,6 +944,21 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
         ))
     except Exception:
         raise HTTPException(status_code=502, detail="Couldn't generate a plan — try again.")
+
+    topic_contract = [
+        TopicContractSection(
+            section=sec.section,
+            unmatched=sec.unmatched,
+            buckets=[
+                TopicContractBucket(
+                    label=b.label, weightNote=b.weightNote,
+                    chapters=[TopicContractChapter(chapter=p.chapter, reason=p.reason) for p in b.chapters],
+                )
+                for b in sec.buckets
+            ],
+        )
+        for sec in contract
+    ]
 
     # Fill in day offsets from each phase's `weeks` so later reads can tell
     # which phase "today" falls into without re-parsing free text.
@@ -954,7 +972,10 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
         ))
         cursor += span_days
 
-    return TargetExamPlan(phases=phases, focusDistribution=out.focusDistribution, dailyHoursEstimate=out.dailyHoursEstimate)
+    return TargetExamPlan(
+        phases=phases, focusDistribution=out.focusDistribution, dailyHoursEstimate=out.dailyHoursEstimate,
+        topicContract=topic_contract,
+    )
 
 
 @app.post("/target-exam/accept", response_model=TargetExamState)

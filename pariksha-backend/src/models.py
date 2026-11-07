@@ -200,10 +200,31 @@ class TargetExamPhase(BaseModel):
     endDay: int = 0
 
 
+class TopicContractChapter(BaseModel):
+    chapter: str
+    reason: str
+
+
+class TopicContractBucket(BaseModel):
+    label: str
+    weightNote: str
+    chapters: List[TopicContractChapter]
+
+
+class TopicContractSection(BaseModel):
+    section: str
+    buckets: List[TopicContractBucket]
+    unmatched: List[str] = []
+
+
 class TargetExamPlan(BaseModel):
     phases: List[TargetExamPhase]
     focusDistribution: Dict[str, float]
     dailyHoursEstimate: float
+    # Deterministic chapter-allocation contract this plan was built around -
+    # see src/topic_contract.py. Empty for sections/exams it couldn't compute
+    # one for (falls back to the AI's own judgment there).
+    topicContract: List[TopicContractSection] = []
 
 
 class SectionConfidence(BaseModel):

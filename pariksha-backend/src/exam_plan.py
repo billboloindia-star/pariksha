@@ -12,7 +12,9 @@ from google import genai
 from pydantic import BaseModel
 
 from src.config import settings
-from src.exam_patterns import pattern_prompt_block
+from src.exam_patterns import pattern_for, pattern_prompt_block
+from src.topic_contract import ContractSection, build_contract
+LEVEL_SCORE = {"very_low": 20, "average": 55, "excellent": 85}
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,49 @@ def _mock_guidance(days: int) -> str:
     )
 
 
-def _build_prompt(data: ExamPlanInput) -> str:
+def _build_contract(data: ExamPlanInput) -> List[ContractSection]:
+    weak_topic_accuracy = {w.topic: w.accuracy for w in data.weakTopics}
+    section_levels = {c.section: c.level for c in data.sectionConfidence}
+    chapter_accuracy: Dict[str, Dict[str, float]] = {}
+    for c in data.sectionConfidence:
+        if c.chapterAccuracy:
+            chapter_accuracy[c.section] = dict(c.chapterAccuracy)
+        elif c.chapterLevels:
+            chapter_accuracy[c.section] = {ch: LEVEL_SCORE.get(lv, 55) for ch, lv in c.chapterLevels.items()}
+    pattern = pattern_for(data.exam, data.stage)
+    return build_contract(
+        pattern, data.chaptersBySection, weak_topic_accuracy, section_levels,
+        chapter_accuracy, data.daysUntilExam,
+    )
+
+
+def _contract_prompt_block(contract: List[ContractSection]) -> str:
+    if not contract:
+        return ""
+    lines = []
+    for sec in contract:
+        lines.append(f"## {sec.section}")
+        for b in sec.buckets:
+            chapter_names = ", ".join(p.chapter for p in b.chapters)
+            lines.append(f"  - {b.label}: {chapter_names}")
+    return f"""
+CHAPTER SELECTION HAS ALREADY BEEN DECIDED for the sections below - a server-side process already
+weighed real exam weightage, the student's attempt history, and their starting-point confidence to
+pick these exact chapters. Do NOT choose your own chapters for these sections, do NOT add chapters
+not listed here, and do NOT drop any listed chapter without good reason - your job is to sequence
+these into sensible phases and write good descriptions around them, not to re-decide the selection:
+{chr(10).join(lines)}
+
+Every chapter listed above should appear in some phase's focusTopics at least once (the final
+revision/mocks-only phase is the one exception - it stays empty regardless). Distribute them across
+the non-final phases in whatever order makes pedagogical sense (foundational chapters earlier,
+harder ones once the basics are solid), and you MAY still choose how many phases each chapter needs
+or repeat a chapter across phases if it's a true weak point - but the chapter SET per section is
+fixed to exactly what's listed above.
+"""
+
+
+def _build_prompt(data: ExamPlanInput, contract: List[ContractSection]) -> str:
     weak_lines = "\n".join(
         f"- {t.topic}: {t.accuracy}% accuracy over {t.attempts} attempts" for t in data.weakTopics
     ) or "- No attempt history yet."
@@ -145,6 +189,8 @@ chapters from the section's valid-chapter list because the section itself was ra
         starting_point_block = "\nNo starting-point self-assessment was given - rely on attempt history alone; if that's empty too, treat this as a cold start and build a broad foundation plan.\n"
 
     pattern_block = pattern_prompt_block(data.exam, data.stage)
+    contract_block = _contract_prompt_block(contract)
+    contract_sections = {sec.section for sec in contract if sec.buckets}
 
     return f"""You are building a phased study plan for a student preparing for {data.exam} ({data.stage}).
 
@@ -165,11 +211,12 @@ topics to triage vs skip) instead of generic study advice.
 
 Mock test cadence for this timeline (follow this - do not default to a flat ~15% regardless of
 how close the exam is): {_mock_guidance(data.daysUntilExam)}
-
+{contract_block}
 The ONLY valid chapter names you may use in "focusTopics" (use the exact string as given, do not
 paraphrase, abbreviate, or invent a new chapter name), grouped by section so you know exactly
 which section each one belongs to - every section listed here ({", ".join(section_names)}) needs
-real representation in the plan, not just the one or two sections with the most attempt history:
+real representation in the plan, not just the one or two sections with the most attempt history.
+{"For " + ", ".join(sorted(contract_sections)) + ", the CHAPTER SELECTION block above already fixes which of these you must use - this full list is just for reference/validation." if contract_sections else ""}
 {chapters_lines}
 
 Write a phased study plan as JSON only - no markdown fences, no commentary. Match this exact shape:
@@ -193,22 +240,14 @@ Rules:
   never describe the last phase as "light" when days remaining is small).
 - Every other phase's focusTopics must be chosen from the "valid chapter names" list above,
   weighted toward the weakest topics given - do not pick topics the student is already strong at
-  except lightly in a later phase as upkeep.
-- Coverage across sections must be fair, not dominated by whichever section happens to have the
-  most attempt-history rows. Count the TOTAL focusTopics you pick for each section across all
-  phases combined: a section rated "Excellent" (and with no diagnostic contradicting that) can
-  reasonably get few or none, but any section rated "Very low" or "Average" must get a real,
-  comparable share - do not let one section end up with 8-10 topics while another sits at 1-2
-  when both were rated similarly. If a section's own weak-topic/attempt signal is thin, pull more
-  of its focusTopics straight from that section's own chapter list above instead of skipping it.
-- Coverage WITHIN a topic matters too. When the real exam pattern above describes one weighted
-  topic as an umbrella over several distinct real chapters (e.g. "Arithmetic (Average/Ratio/SI-CI/
-  Profit-Loss/Time-Work/Partnership/Mixture etc.)" is really ~10 different bank chapters, not one),
-  do not concentrate that topic's time on just 1-2 of those sub-chapters - real exams draw from
-  many different ones each sitting, not the same couple repeatedly. Spread focusTopics across a
-  genuinely diverse set of that umbrella's real sub-chapters (as listed in the valid-chapter names
-  above), proportional to how many phases/weeks are available, not just whichever 1-2 happen to be
-  weakest.
+  except lightly in a later phase as upkeep. For any section covered by the CHAPTER SELECTION
+  block above, this is already handled for you - just place those exact chapters into phases.
+  For any OTHER section (no CHAPTER SELECTION block for it), apply the same judgment yourself:
+  coverage across sections must be fair, not dominated by whichever section has the most
+  attempt-history rows - a section rated "Excellent" can reasonably get few or none, but "Very
+  low"/"Average" sections need a real, comparable share, and a broad real topic spanning several
+  distinct chapters (an umbrella like "Arithmetic") needs a genuinely varied spread across its
+  sub-chapters, not the same 1-2 generic-sounding ones every time.
 - focusDistribution values are percentages across study time (by section name, e.g. "Reasoning",
   "Quant"), must sum to 100, weighted toward whichever sections are weakest - factor in the
   starting-point self-assessment above too, not just attempt history, especially for a student
@@ -236,11 +275,12 @@ class ExamPlanner:
     def __init__(self):
         self.client = genai.Client(api_key=settings.gemini_api_key)
 
-    def generate(self, data: ExamPlanInput) -> ExamPlanOutput:
-        prompt = _build_prompt(data)
+    def generate(self, data: ExamPlanInput) -> tuple[ExamPlanOutput, List[ContractSection]]:
+        contract = _build_contract(data)
+        prompt = _build_prompt(data, contract)
         try:
             response = self.client.models.generate_content(model=MODEL_NAME, contents=[prompt])
-            return _parse_response(response.text)
+            return _parse_response(response.text), contract
         except Exception as e:
             logger.error(f"Failed to generate exam plan: {e}")
             raise
