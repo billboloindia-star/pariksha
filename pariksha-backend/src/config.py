@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     library_table: str = "pariksha-library-dev"
     library_bucket: str = ""
     bank_table: str = "pariksha-bank-dev"
+    bank_images_bucket: str = ""
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 

@@ -14,11 +14,29 @@ class AuthResponse(BaseModel):
     token: str
     email: str
     plan: str = "free"
+    name: Optional[str] = None
+    avatarUrl: Optional[str] = None
 
 
 class MeResponse(BaseModel):
     email: str
     plan: str = "free"
+    name: Optional[str] = None
+    avatarUrl: Optional[str] = None
+
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+
+
+class AvatarUpload(BaseModel):
+    fileBase64: str
+    fileType: str
+
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
 
 
 class TopicTally(BaseModel):

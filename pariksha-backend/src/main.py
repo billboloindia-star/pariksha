@@ -22,11 +22,13 @@ from src.db import attempts_table, bank_table, library_table, s3, users_table
 from src.models import (
     AttemptRecord,
     AuthResponse,
+    AvatarUpload,
     BankIngestRequest,
     BankIngestResult,
     BankQuestion,
     BankQuestionIn,
     BankSectionSummary,
+    ChangePasswordRequest,
     Credentials,
     LibraryFileLink,
     LibraryItem,
@@ -35,11 +37,14 @@ from src.models import (
     LibraryUpload,
     MeResponse,
     PracticePaperRequest,
+    ProfileUpdate,
     QuestionNoteUpdate,
 )
 
 MAX_LIBRARY_FILE_BYTES = 6 * 1024 * 1024
 MAX_LIBRARY_FILES_PER_UPLOAD = 20
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+ALLOWED_AVATAR_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 
 _reviewer = GeminiReviewer()
 
@@ -81,6 +86,17 @@ def _normalise_email(raw: str) -> str:
     return email
 
 
+def _avatar_key(email: str, ext: str) -> str:
+    return f"avatars/{email}.{ext}"
+
+
+def _avatar_url(item: dict) -> str | None:
+    key = (item or {}).get("avatarKey")
+    if not key:
+        return None
+    return f"https://{settings.bank_images_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+
+
 def _query_all(table, **kwargs) -> list:
     """DynamoDB Query caps a single response at ~1MB - a single call silently
     truncates once a user's data grows past that (confirmed on the bank
@@ -116,13 +132,69 @@ def login(body: Credentials):
     if not item or not verify_password(body.password, item["passwordHash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
-    return AuthResponse(token=create_jwt(email), email=email, plan=item.get("plan", "free"))
+    return AuthResponse(
+        token=create_jwt(email), email=email, plan=item.get("plan", "free"),
+        name=item.get("name"), avatarUrl=_avatar_url(item),
+    )
+
+
+@app.post("/auth/change-password")
+def change_password(body: ChangePasswordRequest, email: str = Depends(get_current_email)):
+    item = users_table.get_item(Key={"email": email}).get("Item")
+    if not item or not verify_password(body.currentPassword, item["passwordHash"]):
+        raise HTTPException(status_code=401, detail="Current password is incorrect.")
+    if len(body.newPassword) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+    users_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET passwordHash = :h",
+        ExpressionAttributeValues={":h": hash_password(body.newPassword)},
+    )
+    return {"ok": True}
 
 
 @app.get("/me", response_model=MeResponse)
 def me(email: str = Depends(get_current_email)):
     item = users_table.get_item(Key={"email": email}).get("Item")
-    return MeResponse(email=email, plan=(item or {}).get("plan", "free"))
+    return MeResponse(email=email, plan=(item or {}).get("plan", "free"), name=(item or {}).get("name"), avatarUrl=_avatar_url(item))
+
+
+@app.put("/me", response_model=MeResponse)
+def update_profile(body: ProfileUpdate, email: str = Depends(get_current_email)):
+    name = (body.name or "").strip()
+    users_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET #n = :n",
+        ExpressionAttributeNames={"#n": "name"},
+        ExpressionAttributeValues={":n": name or None},
+    )
+    item = users_table.get_item(Key={"email": email}).get("Item")
+    return MeResponse(email=email, plan=(item or {}).get("plan", "free"), name=(item or {}).get("name"), avatarUrl=_avatar_url(item))
+
+
+@app.post("/me/avatar", response_model=MeResponse)
+def upload_avatar(body: AvatarUpload, email: str = Depends(get_current_email)):
+    ext = ALLOWED_AVATAR_TYPES.get(body.fileType)
+    if not ext:
+        raise HTTPException(status_code=400, detail="Use a JPEG, PNG, or WEBP image.")
+    try:
+        raw = base64.b64decode(body.fileBase64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not decode the image.")
+    if len(raw) > MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=413, detail="Image is too large (max 2MB).")
+
+    # Overwrite the same key every time rather than a fresh uuid per upload -
+    # one avatar per account, so there's nothing to clean up on re-upload.
+    key = _avatar_key(email, ext)
+    s3.put_object(Bucket=settings.bank_images_bucket, Key=key, Body=raw, ContentType=body.fileType)
+    users_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET avatarKey = :k",
+        ExpressionAttributeValues={":k": key},
+    )
+    item = users_table.get_item(Key={"email": email}).get("Item")
+    return MeResponse(email=email, plan=(item or {}).get("plan", "free"), name=(item or {}).get("name"), avatarUrl=_avatar_url(item))
 
 
 def require_premium(email: str = Depends(get_current_email)) -> str:

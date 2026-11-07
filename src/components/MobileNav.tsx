@@ -35,11 +35,21 @@ export default function MobileNav({ active, onNavigate, session, onLogout }: Pro
         {api.backendEnabled() && session && (
           <div className="mobileAcctWrap" ref={menuRef}>
             <button className="mobileAcctBtn" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu">
-              <span className="acctAvatar">{initials(session.email)}</span>
+              {session.avatarUrl ? (
+                <img className="acctAvatarImg" src={session.avatarUrl} alt="" />
+              ) : (
+                <span className="acctAvatar">{initials(session.email)}</span>
+              )}
             </button>
             {menuOpen && (
               <div className="mobileAcctMenu">
-                <div className="mobileAcctEmail">{session.email}</div>
+                <div className="mobileAcctEmail">{session.name || session.email}</div>
+                <button
+                  className="mobileAcctProfile"
+                  onClick={() => { setMenuOpen(false); onNavigate("profile"); }}
+                >
+                  View profile
+                </button>
                 <button
                   className="mobileAcctLogout"
                   onClick={() => { setMenuOpen(false); onLogout(); }}

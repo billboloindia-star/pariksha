@@ -3,7 +3,7 @@ import * as api from "../../shared/api";
 import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
-export type HubPhase = "home" | "progress" | "library" | "vault";
+export type HubPhase = "home" | "progress" | "library" | "vault" | "profile";
 
 interface Props {
   active: HubPhase;
@@ -34,6 +34,9 @@ export function MasterVaultIcon() {
 }
 export function LogoutIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M13 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+export function ProfileIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
 
 export function hubItems(session?: api.Session | null): { phase: HubPhase; label: string; icon: ReactElement }[] {
@@ -101,10 +104,18 @@ export default function Sidebar({ active, onNavigate, session, onLogout }: Props
 
         {api.backendEnabled() && session && (
           <div className="sidebarFoot">
-            <div className="sidebarAcct" title={session.email}>
-              <span className="acctAvatar">{initials(session.email)}</span>
-              <span className="sidebarItemLabel">{session.email}</span>
-            </div>
+            <button
+              className={`sidebarAcct sidebarAcctBtn ${active === "profile" ? "active" : ""}`}
+              onClick={(e) => { onNavigate("profile"); e.currentTarget.blur(); }}
+              title="Profile"
+            >
+              {session.avatarUrl ? (
+                <img className="acctAvatarImg" src={session.avatarUrl} alt="" />
+              ) : (
+                <span className="acctAvatar">{initials(session.email)}</span>
+              )}
+              <span className="sidebarItemLabel">{session.name || session.email}</span>
+            </button>
             <button className="sidebarItem sidebarLogout" onClick={(e) => { onLogout(); e.currentTarget.blur(); }} title="Log out">
               <LogoutIcon />
             </button>

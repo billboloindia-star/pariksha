@@ -12,6 +12,11 @@ import * as api from "../../shared/api";
 interface Props {
   session: api.Session | null;
   onPracticeTopic: (section: string, chapter: string) => void;
+  onBrowseBank: () => void;
+}
+
+function normalizeTopic(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/s\b/g, "");
 }
 
 function fmt(s: number) {
@@ -36,7 +41,7 @@ function accOf(a: AttemptRecord): number {
   return attempted ? Math.round((a.correct / attempted) * 100) : 0;
 }
 
-export default function Progress({ session, onPracticeTopic }: Props) {
+export default function Progress({ session, onPracticeTopic, onBrowseBank }: Props) {
   const [history, setHistory] = useState<AttemptRecord[] | null>(null);
   const [selected, setSelected] = useState<AttemptRecord | null>(null);
   const [bankSections, setBankSections] = useState<BankSectionSummary[] | null>(null);
@@ -59,6 +64,27 @@ export default function Progress({ session, onPracticeTopic }: Props) {
     for (const s of bankSections ?? []) m[s.chapter] = s.section;
     return m;
   }, [bankSections]);
+
+  // Attempt topics rarely spell a chapter exactly how the bank does (an
+  // AI-converted Paper Vault paper names its own topics freely) - so beyond
+  // the exact lookup above, try a normalized/substring match before giving
+  // up on finding a matching chapter entirely.
+  const normalizedChapters = useMemo(
+    () => (bankSections ?? []).map((s) => ({ section: s.section, chapter: s.chapter, norm: normalizeTopic(s.chapter) })),
+    [bankSections]
+  );
+
+  function findMatch(topic: string): { section: string; chapter: string } | null {
+    const exactSection = chapterToSection[topic];
+    if (exactSection) return { section: exactSection, chapter: topic };
+    const norm = normalizeTopic(topic);
+    if (!norm) return null;
+    const exact = normalizedChapters.find((c) => c.norm === norm);
+    if (exact) return { section: exact.section, chapter: exact.chapter };
+    const partial = normalizedChapters.find((c) => c.norm.includes(norm) || norm.includes(c.norm));
+    if (partial) return { section: partial.section, chapter: partial.chapter };
+    return null;
+  }
 
   const chronological = useMemo(() => [...(history ?? [])].sort((a, b) => a.when - b.when), [history]);
 
@@ -298,7 +324,7 @@ export default function Progress({ session, onPracticeTopic }: Props) {
           <div className="pgFocusGrid">
             {focusTopics.map((t, i) => {
               const t2 = tier(t.acc);
-              const section = chapterToSection[t.topic];
+              const match = findMatch(t.topic);
               return (
                 <div className={`pgFocusCard ${t2 === "warning" ? "warn" : ""}`} key={t.topic}>
                   <div className="pgFocusTop">
@@ -309,8 +335,12 @@ export default function Progress({ session, onPracticeTopic }: Props) {
                   </div>
                   <div className="pgFocusTopic">{t.topic}</div>
                   <div className="pgFocusStat"><b>{t.acc}%</b> accuracy &middot; {t.att} attempt{t.att === 1 ? "" : "s"}</div>
-                  {canPractice && section ? (
-                    <button className="pgFocusBtn" onClick={() => onPracticeTopic(section, t.topic)}>Practice now &rarr;</button>
+                  {canPractice && match ? (
+                    <button className="pgFocusBtn" onClick={() => onPracticeTopic(match.section, match.chapter)}>Practice now &rarr;</button>
+                  ) : canPractice && bankSections && bankSections.length > 0 ? (
+                    <button className="pgFocusBtn pgFocusBtnGhost" onClick={onBrowseBank} title="No exact chapter match in your bank - browse it instead">
+                      Browse bank &rarr;
+                    </button>
                   ) : null}
                 </div>
               );
