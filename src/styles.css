@@ -1231,7 +1231,7 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 /* ---------- progress control panel (mistakes & activity redesign) ---------- */
 .pgWide.home{max-width:1480px}
 
-.texWide.home{max-width:1760px;width:96vw;padding-left:0;padding-right:0}
+.texWide.home{max-width:1760px;width:100%;padding-left:28px;padding-right:28px}
 
 .pgSectionLabel{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--grey);text-transform:uppercase;margin:36px 0 14px}
 .pgSectionLabel::after{content:"";flex:1;height:1px;background:var(--line)}
