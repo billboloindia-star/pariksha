@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   BankSectionSummary,
+  ConfidenceLevel,
+  Paper,
+  SectionConfidence,
   TargetExamName,
   TargetExamPlan,
   TargetExamStage,
@@ -8,6 +11,7 @@ import type {
 } from "../../shared/types";
 import * as api from "../../shared/api";
 import Spinner from "./Spinner";
+import DatePicker from "./DatePicker";
 
 interface Props {
   onPracticeTopic: (section: string, chapter: string) => void;
@@ -56,6 +60,18 @@ function defaultTotalMarks(exam: TargetExamName | null, stage: TargetExamStage):
   return stage === "prelims" ? t.prelims : t.mains;
 }
 
+const LEVEL_META: Record<ConfidenceLevel, { label: string; color: string }> = {
+  very_low: { label: "Very low", color: "#c0392b" },
+  average: { label: "Average", color: "#b4740e" },
+  excellent: { label: "Excellent", color: "#2f8f4e" },
+};
+
+function levelFromAccuracy(accuracy: number): ConfidenceLevel {
+  if (accuracy < 40) return "very_low";
+  if (accuracy < 70) return "average";
+  return "excellent";
+}
+
 function fmtDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -78,11 +94,47 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   const [genError, setGenError] = useState("");
   const [accepting, setAccepting] = useState(false);
 
+  // ---- starting-point self-assessment (step 3) ----
+  const [sectionLevels, setSectionLevels] = useState<Record<string, ConfidenceLevel>>({});
+  const [diagnosticAccuracy, setDiagnosticAccuracy] = useState<Record<string, number>>({});
+  const [diagnosticSection, setDiagnosticSection] = useState<string | null>(null);
+  const [diagnosticPaper, setDiagnosticPaper] = useState<Paper | null>(null);
+  const [diagnosticLoading, setDiagnosticLoading] = useState(false);
+  const [diagnosticError, setDiagnosticError] = useState("");
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<Record<string, number>>({});
+  const [diagnosticScore, setDiagnosticScore] = useState<{ correct: number; total: number } | null>(null);
+
   useEffect(() => {
     const def = defaultTotalMarks(selectedExam, stage);
     setTotalMarks(def);
     setCutoffMarks(Math.round(def * 0.75));
   }, [selectedExam, stage]);
+
+  const sectionNames = useMemo(() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    for (const s of bankSections ?? []) {
+      if (!seen.has(s.section)) { seen.add(s.section); order.push(s.section); }
+    }
+    return order;
+  }, [bankSections]);
+
+  const chaptersBySection = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const s of bankSections ?? []) (m[s.section] ??= []).push(s.chapter);
+    return m;
+  }, [bankSections]);
+
+  useEffect(() => {
+    setSectionLevels((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const s of sectionNames) {
+        if (!(s in next)) { next[s] = "average"; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [sectionNames]);
 
   useEffect(() => {
     api.fetchTargetExam()
@@ -109,9 +161,55 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     setExamDate(d.toISOString().split("T")[0]);
   }
 
+  async function startDiagnostic(section: string) {
+    setDiagnosticError("");
+    setDiagnosticScore(null);
+    setDiagnosticAnswers({});
+    setDiagnosticLoading(true);
+    setDiagnosticSection(section);
+    try {
+      const paper = await api.generatePracticePaper({
+        section, chapters: chaptersBySection[section] ?? [], count: 10, durationMinutes: 10,
+      });
+      setDiagnosticPaper(paper);
+    } catch (err) {
+      setDiagnosticError(err instanceof Error ? err.message : "Couldn't load the quiz — try again.");
+    } finally {
+      setDiagnosticLoading(false);
+    }
+  }
+
+  function closeDiagnostic() {
+    setDiagnosticSection(null);
+    setDiagnosticPaper(null);
+    setDiagnosticAnswers({});
+    setDiagnosticScore(null);
+  }
+
+  function submitDiagnostic() {
+    if (!diagnosticPaper || !diagnosticSection) return;
+    let correct = 0;
+    for (const q of diagnosticPaper.questions) {
+      if (diagnosticAnswers[q.id] === q.ans) correct++;
+    }
+    const total = diagnosticPaper.questions.length;
+    const accuracy = total ? Math.round((correct / total) * 100) : 0;
+    setSectionLevels((prev) => ({ ...prev, [diagnosticSection]: levelFromAccuracy(accuracy) }));
+    setDiagnosticAccuracy((prev) => ({ ...prev, [diagnosticSection]: accuracy }));
+    setDiagnosticScore({ correct, total });
+  }
+
+  function buildSectionConfidence(): SectionConfidence[] {
+    return sectionNames.map((s) => ({
+      section: s,
+      level: sectionLevels[s] ?? "average",
+      diagnosticAccuracy: diagnosticAccuracy[s],
+    }));
+  }
+
   async function generate() {
     if (!selectedExam || !examDate) return;
-    setStep(3);
+    setStep(4);
     setGenError("");
     setGenStepIndex(0);
     const timer = setInterval(() => {
@@ -119,11 +217,14 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     }, 650);
     const targetCutoffPercent = Math.round((cutoffMarks / totalMarks) * 100);
     try {
-      const plan = await api.generateTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks });
+      const plan = await api.generateTargetExamPlan({
+        exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks,
+        sectionConfidence: buildSectionConfidence(),
+      });
       clearInterval(timer);
       setGeneratedPlan(plan);
       setGenStepIndex(GEN_STEPS.length);
-      setTimeout(() => setStep(4), 400);
+      setTimeout(() => setStep(5), 400);
     } catch (err) {
       clearInterval(timer);
       setGenError(err instanceof Error ? err.message : "Couldn't generate a plan — try again.");
@@ -135,7 +236,10 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     setAccepting(true);
     const targetCutoffPercent = Math.round((cutoffMarks / totalMarks) * 100);
     try {
-      const s = await api.acceptTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks, plan: generatedPlan });
+      const s = await api.acceptTargetExamPlan({
+        exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks,
+        sectionConfidence: buildSectionConfidence(), plan: generatedPlan,
+      });
       setState(s);
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Couldn't save your plan — try again.");
@@ -156,15 +260,19 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   return (
     <div className="home">
       <div className="texStepRow">
-        {[1, 2, 3].map((n) => (
-          <div key={n} style={{ display: "flex", alignItems: "center" }}>
-            <div className={`texStepItem ${step === n ? "active" : ""} ${step > n ? "done" : ""}`}>
-              <span className="texStepDot">{step > n ? "✓" : n}</span>
-              <span className="texStepLabel">{n === 1 ? "Exam" : n === 2 ? "Target" : "Your plan"}</span>
+        {[1, 2, 3, 4].map((n) => {
+          const displayStep = step >= 4 ? 4 : step;
+          const label = n === 1 ? "Exam" : n === 2 ? "Target" : n === 3 ? "Starting point" : "Your plan";
+          return (
+            <div key={n} style={{ display: "flex", alignItems: "center" }}>
+              <div className={`texStepItem ${displayStep === n ? "active" : ""} ${displayStep > n ? "done" : ""}`}>
+                <span className="texStepDot">{displayStep > n ? "✓" : n}</span>
+                <span className="texStepLabel">{label}</span>
+              </div>
+              {n < 4 && <div className={`texStepLine ${displayStep > n ? "done" : ""}`} />}
             </div>
-            {n < 3 && <div className={`texStepLine ${step > n ? "done" : ""}`} />}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {step === 1 && (
@@ -216,10 +324,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             <div className="texField">
               <div className="texFieldLabel">When is your exam?</div>
               <p className="texFieldHint">Don't know the exact date yet? Pick a typical window — we'll adjust once it's announced.</p>
-              <label className="texDateField">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" strokeLinecap="round" /></svg>
-                <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
-              </label>
+              <DatePicker value={examDate} onChange={setExamDate} placeholder="Pick your exam date" />
               <div className="texQuickRow">
                 {[6, 10, 16].map((w) => (
                   <button key={w} className="texQuickBtn" onClick={() => quickDate(w)}>{w} weeks away</button>
@@ -229,7 +334,6 @@ export default function TargetExam({ onPracticeTopic }: Props) {
 
             <div className="texField">
               <div className="texFieldLabel">Total marks</div>
-              <p className="texFieldHint">Not every exam is out of 100 — RRB Prelims is out of 80, for example. Adjust if this year's pattern differs.</p>
               <input
                 type="number"
                 className="texMarksInput"
@@ -261,12 +365,124 @@ export default function TargetExam({ onPracticeTopic }: Props) {
           </div>
           <div className="texFoot">
             <button className="btn" onClick={() => setStep(1)}>← Back</button>
-            <button className="btn primary" disabled={!examDate} onClick={generate}>Generate my plan →</button>
+            <button className="btn primary" disabled={!examDate} onClick={() => setStep(3)}>Continue →</button>
           </div>
         </div>
       )}
 
       {step === 3 && (
+        <div className="texPanel">
+          <div className="texHeading">
+            <h1>How much do you already know?</h1>
+            <p>Rate each section, or take a quick diagnostic and let your answers decide — the AI plan weighs this heavily when you have little or no practice history yet.</p>
+          </div>
+          <div className="texCard">
+            {sectionNames.length === 0 ? (
+              <p className="texFieldHint">No bank sections found yet — the plan will lean on attempt history alone.</p>
+            ) : (
+              sectionNames.map((s) => {
+                const level = sectionLevels[s] ?? "average";
+                const accuracy = diagnosticAccuracy[s];
+                return (
+                  <div key={s} className="texConfRow">
+                    <div className="texConfHead">
+                      <span className="texConfName">{s}</span>
+                      {accuracy !== undefined && (
+                        <span className="texConfDiag">Diagnostic: {accuracy}% · <button className="texConfRetake" onClick={() => startDiagnostic(s)}>Retake</button></span>
+                      )}
+                    </div>
+                    <div className="texConfBody">
+                      <div className="texLevelRow">
+                        {(["very_low", "average", "excellent"] as ConfidenceLevel[]).map((lv) => (
+                          <button
+                            key={lv}
+                            className={`texLevelBtn ${level === lv ? "active" : ""}`}
+                            style={level === lv ? { borderColor: LEVEL_META[lv].color, color: LEVEL_META[lv].color, background: `${LEVEL_META[lv].color}14` } : undefined}
+                            onClick={() => setSectionLevels((prev) => ({ ...prev, [s]: lv }))}
+                          >
+                            {LEVEL_META[lv].label}
+                          </button>
+                        ))}
+                      </div>
+                      {accuracy === undefined && (
+                        <button className="texDiagLink" onClick={() => startDiagnostic(s)}>Take a quick diagnostic instead →</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="texFoot">
+            <button className="btn" onClick={() => setStep(2)}>← Back</button>
+            <button className="btn primary" onClick={generate}>Generate my plan →</button>
+          </div>
+        </div>
+      )}
+
+      {diagnosticSection && (
+        <div className="modalWrap" onClick={closeDiagnostic}>
+          <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+            <h2 className="texDiagTitle">Quick diagnostic — {diagnosticSection}</h2>
+            {diagnosticLoading ? (
+              <div className="loadingBlock"><Spinner size={18} label="Building your quiz…" /></div>
+            ) : diagnosticError ? (
+              <>
+                <p className="error">{diagnosticError}</p>
+                <div className="texFoot">
+                  <button className="btn" onClick={closeDiagnostic}>Close</button>
+                  <button className="btn primary" onClick={() => startDiagnostic(diagnosticSection)}>Try again</button>
+                </div>
+              </>
+            ) : diagnosticScore ? (
+              <>
+                <div className="texDiagResult">
+                  <div className="texDiagScore">{diagnosticScore.correct}/{diagnosticScore.total}</div>
+                  <div className="texDiagScorePct">{Math.round((diagnosticScore.correct / Math.max(1, diagnosticScore.total)) * 100)}% accuracy</div>
+                  <p>We've set <b>{diagnosticSection}</b> to "{LEVEL_META[levelFromAccuracy(Math.round((diagnosticScore.correct / Math.max(1, diagnosticScore.total)) * 100))].label}" based on this — you can still override it manually.</p>
+                </div>
+                <div className="texFoot">
+                  <button className="btn primary" onClick={closeDiagnostic}>Done</button>
+                </div>
+              </>
+            ) : diagnosticPaper ? (
+              <>
+                <p className="texFieldHint">{diagnosticPaper.questions.length} questions, no timer — answer as best you can.</p>
+                <div className="texDiagQList">
+                  {diagnosticPaper.questions.map((q, qi) => (
+                    <div key={q.id} className="texDiagQ">
+                      <div className="texDiagQText"><b>{qi + 1}.</b> {q.text}</div>
+                      <div className="texDiagOpts">
+                        {(q.options ?? []).map((opt, oi) => (
+                          <button
+                            key={oi}
+                            className={`texDiagOpt ${diagnosticAnswers[q.id] === oi ? "active" : ""}`}
+                            onClick={() => setDiagnosticAnswers((prev) => ({ ...prev, [q.id]: oi }))}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="texFoot">
+                  <button className="btn" onClick={closeDiagnostic}>Cancel</button>
+                  <button
+                    className="btn primary"
+                    disabled={Object.keys(diagnosticAnswers).length < diagnosticPaper.questions.length}
+                    onClick={submitDiagnostic}
+                  >
+                    Submit diagnostic
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {step === 4 && (
         <div className="texGenWrap">
           <div className="texGenRing">
             <svg width="88" height="88" viewBox="0 0 88 88">
@@ -293,7 +509,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
         </div>
       )}
 
-      {step === 4 && generatedPlan && selectedExam && (
+      {step === 5 && generatedPlan && selectedExam && (
         <div className="texPanel">
           <div className="texPlanHero">
             <div className="texBlob" />

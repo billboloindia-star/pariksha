@@ -1680,14 +1680,45 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texToggleRow{display:flex;gap:8px}
 .texToggleBtn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line-2);background:#fff;font-weight:600;font-size:13px}
 .texToggleBtn.active{background:var(--blue);border-color:var(--blue);color:#fff}
-.texDateField{
-  display:flex;align-items:center;gap:10px;width:100%;max-width:280px;padding:11px 13px;border-radius:10px;
-  border:1.5px solid var(--line-2);background:var(--soft);color:var(--grey);cursor:text;transition:border-color .12s,background .12s;
+/* ---- custom calendar date picker (DatePicker.tsx) ---- */
+.dpWrap{position:relative;width:100%;max-width:280px}
+.dpField{
+  display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border-radius:10px;
+  border:1.5px solid var(--line-2);background:var(--soft);color:var(--dim);cursor:pointer;transition:border-color .12s,background .12s;
+  font-family:var(--font);text-align:left;
 }
-.texDateField:focus-within{border-color:var(--blue);background:#fff}
-.texDateField input[type=date]{
-  flex:1;border:none;background:none;outline:none;font-size:14px;font-family:var(--font);color:var(--ink);padding:0;
+.dpField:hover{border-color:var(--line-2);background:#fff}
+.dpField svg{flex:none;color:var(--dim)}
+.dpVal{font-size:14px;font-weight:600;color:var(--ink)}
+.dpPlaceholder{font-size:14px;color:var(--dim)}
+.dpPopover{
+  position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:300px;background:#fff;border:1px solid var(--line);
+  border-radius:14px;box-shadow:0 12px 32px rgba(20,20,30,.16);padding:14px;
 }
+.dpHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dpHeadLabel{font-weight:700;font-size:14px}
+.dpNavBtn{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--soft);
+  display:flex;align-items:center;justify-content:center;color:var(--ink);
+}
+.dpNavBtn:hover{background:var(--line-2)}
+.dpWeekRow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.dpWeekRow span{text-align:center;font-size:11px;font-weight:700;color:var(--dim);padding:4px 0}
+.dpGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dpCell{
+  aspect-ratio:1;border-radius:8px;border:none;background:none;font-size:13px;font-weight:600;color:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+}
+.dpCell:hover:not(:disabled){background:var(--soft)}
+.dpCell:disabled{color:var(--line-2);cursor:not-allowed}
+.dpOutside{color:var(--dim);opacity:.45}
+.dpToday{box-shadow:inset 0 0 0 1.5px var(--blue);color:var(--blue)}
+.dpSelected{background:var(--blue) !important;color:#fff !important}
+.dpFoot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.dpFootBtn{font-size:12.5px;font-weight:700;color:var(--dim);padding:4px 8px;border-radius:6px}
+.dpFootBtn:hover{background:var(--soft);color:var(--ink)}
+.dpFootBtn.primary{color:var(--blue)}
+
 .texQuickRow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .texQuickBtn{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--soft);font-size:12px;font-weight:700;color:var(--dim)}
 .texQuickBtn:hover{color:var(--ink);border-color:var(--line-2)}
@@ -1696,6 +1727,36 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   font-size:15px;font-weight:700;font-family:var(--mono);color:var(--ink);transition:border-color .12s,background .12s;
 }
 .texMarksInput:focus{outline:none;border-color:var(--blue);background:#fff}
+
+/* ---- starting-point self-assessment (step 3) ---- */
+.texConfRow{padding:16px 0;border-bottom:1px solid var(--line)}
+.texConfRow:last-child{border-bottom:none;padding-bottom:0}
+.texConfRow:first-child{padding-top:0}
+.texConfHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.texConfName{font-weight:700;font-size:14.5px}
+.texConfDiag{font-size:12px;color:var(--dim);font-weight:600}
+.texConfRetake{color:var(--blue);font-weight:700}
+.texConfBody{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.texLevelRow{display:flex;gap:8px}
+.texLevelBtn{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line-2);background:#fff;font-size:12.5px;font-weight:700;color:var(--dim)}
+.texLevelBtn:hover{border-color:var(--line-2);color:var(--ink)}
+.texDiagLink{font-size:12.5px;font-weight:700;color:var(--blue)}
+.texDiagLink:hover{text-decoration:underline}
+
+.modal.wide{max-width:640px;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
+.texDiagTitle{font-size:17px;font-weight:700;margin-bottom:10px}
+.texDiagQList{overflow-y:auto;flex:1;margin:4px 0 14px;padding-right:4px}
+.texDiagQ{padding:14px 0;border-bottom:1px solid var(--line)}
+.texDiagQ:first-child{padding-top:0}
+.texDiagQText{font-size:13.5px;margin-bottom:10px;line-height:1.5}
+.texDiagOpts{display:flex;flex-direction:column;gap:6px}
+.texDiagOpt{text-align:left;padding:9px 12px;border-radius:8px;border:1.5px solid var(--line-2);background:#fff;font-size:13px;color:var(--ink)}
+.texDiagOpt:hover{border-color:var(--line-2);background:var(--soft)}
+.texDiagOpt.active{border-color:var(--blue);background:rgba(26,115,199,.08);font-weight:600}
+.texDiagResult{text-align:center;padding:12px 0 20px}
+.texDiagScore{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--blue)}
+.texDiagScorePct{font-size:13px;color:var(--dim);font-weight:700;margin-bottom:12px}
+.texDiagResult p{font-size:13.5px;color:var(--dim);max-width:400px;margin:0 auto}
 
 .texFoot{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
 .texFoot .btn.lg{padding:12px 22px}

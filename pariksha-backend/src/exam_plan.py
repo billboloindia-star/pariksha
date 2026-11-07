@@ -24,6 +24,15 @@ class WeakTopicInput(BaseModel):
     attempts: int
 
 
+class SectionConfidenceInput(BaseModel):
+    section: str
+    level: str  # "very_low" | "average" | "excellent" - the user's own self-rating
+    # Set when the user took the inline diagnostic quiz for this section instead
+    # of (or to confirm) their self-rating - a measured number, more trustworthy
+    # than a guess, so it should carry more weight in the plan than `level` alone.
+    diagnosticAccuracy: Optional[float] = None
+
+
 class ExamPlanInput(BaseModel):
     exam: str
     stage: str
@@ -32,6 +41,10 @@ class ExamPlanInput(BaseModel):
     currentAvgAccuracy: float
     weakTopics: List[WeakTopicInput]
     availableChapters: List[str]  # exact bank chapter names - the only valid focusTopic values
+    # Self-reported (or diagnostic-measured) starting point per section - mainly
+    # useful for a cold-start user with little/no attempt history, where
+    # weakTopics alone has nothing to go on.
+    sectionConfidence: List[SectionConfidenceInput] = []
 
 
 class ExamPlanPhase(BaseModel):
@@ -47,11 +60,29 @@ class ExamPlanOutput(BaseModel):
     dailyHoursEstimate: float
 
 
+LEVEL_LABEL = {"very_low": "Very low", "average": "Average", "excellent": "Excellent"}
+
+
 def _build_prompt(data: ExamPlanInput) -> str:
     weak_lines = "\n".join(
         f"- {t.topic}: {t.accuracy}% accuracy over {t.attempts} attempts" for t in data.weakTopics
-    ) or "- No attempt history yet - treat this as a cold start and build a broad foundation plan."
+    ) or "- No attempt history yet."
     chapters_lines = "\n".join(f"- {c}" for c in data.availableChapters[:400])
+
+    if data.sectionConfidence:
+        conf_lines = "\n".join(
+            f"- {c.section}: self-rated \"{LEVEL_LABEL.get(c.level, c.level)}\""
+            + (f", confirmed by a {round(c.diagnosticAccuracy)}% score on a diagnostic quiz" if c.diagnosticAccuracy is not None else " (no diagnostic taken - treat as a rough guess)")
+            for c in data.sectionConfidence
+        )
+        starting_point_block = f"""
+The student's self-reported starting point, section by section (use this heavily if attempt
+history above is thin or empty - a diagnostic-confirmed rating is far more reliable than a bare
+self-rating, so trust those numbers over a self-rating alone):
+{conf_lines}
+"""
+    else:
+        starting_point_block = "\nNo starting-point self-assessment was given - rely on attempt history alone; if that's empty too, treat this as a cold start and build a broad foundation plan.\n"
 
     return f"""You are building a phased study plan for a student preparing for {data.exam} ({data.stage}).
 
@@ -61,7 +92,7 @@ Their current average accuracy across recent attempts: {data.currentAvgAccuracy}
 
 Their weakest topics right now (lowest accuracy first):
 {weak_lines}
-
+{starting_point_block}
 The ONLY valid chapter names you may use in "focusTopics" (use the exact string as given, do not
 paraphrase, abbreviate, or invent a new chapter name):
 {chapters_lines}
@@ -87,7 +118,9 @@ Rules:
   weighted toward the weakest topics given - do not pick topics the student is already strong at
   except lightly in a later phase as upkeep.
 - focusDistribution values are percentages across study time (by section name, e.g. "Reasoning",
-  "Quant"), must sum to 100, weighted toward whichever sections are weakest.
+  "Quant"), must sum to 100, weighted toward whichever sections are weakest - factor in the
+  starting-point self-assessment above too, not just attempt history, especially for a student
+  with few or no attempts yet.
 - dailyHoursEstimate is a realistic number (1.5-4) given the days remaining and how far current
   accuracy is from the target cutoff - a bigger gap or fewer days means more hours/day.
 - Every phase description must reference specific real topic names, not generic advice."""
