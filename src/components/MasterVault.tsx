@@ -130,7 +130,12 @@ export default function MasterVault({ onLoaded, seed }: Props) {
       seedApplied.current = true;
       setActiveSection(seed.section);
       setSelectedChapters(seed.chapters);
-      scrollToBuilder();
+      // Scrolling right here would run against the DOM as it looked
+      // *before* this state update paints (still the old/empty section's
+      // shorter chip grid), landing on the wrong spot once the real
+      // content pops in a frame later. Defer two rAFs so the browser has
+      // actually committed and painted the new layout first.
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBuilder));
       return;
     }
     if (!activeSection) setActiveSection(sectionNames[0]);
