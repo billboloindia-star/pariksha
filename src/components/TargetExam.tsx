@@ -414,7 +414,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
         <div className="texPanel">
           <div className="texHeading">
             <h1>How much do you already know?</h1>
-            <p>Rate each section, or take a quick diagnostic and let your answers decide — the AI plan weighs this heavily when you have little or no practice history yet.</p>
+            <p>Rate each section, or take a quick diagnostic and let your answers decide — your plan weighs this heavily when you have little or no practice history yet.</p>
           </div>
           <div className="texCard">
             {sectionNames.length === 0 ? (
@@ -615,7 +615,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
         <div className="texPanel">
           <div className="texPlanHero">
             <div className="texBlob" />
-            <div className="texPlanEyebrow">Your AI-generated plan</div>
+            <div className="texPlanEyebrow">Your personalized plan</div>
             <h1 className="texPlanTitle">{selectedExam} — {stage[0].toUpperCase() + stage.slice(1)}</h1>
             <div className="texPlanStats">
               <div className="texPlanStat"><b>{Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000))}</b><span>Days left</span></div>
@@ -629,8 +629,8 @@ export default function TargetExam({ onPracticeTopic }: Props) {
               <>
                 <h2 className="texCardH2">Your topic contract</h2>
                 <p className="texCardSub">
-                  Computed server-side from {selectedExam}'s real PYQ-based exam pattern and your own weak-topic / confidence
-                  state — not the AI's own guess. This is exactly what the plan below is built around.
+                  Built from {selectedExam}'s real exam pattern and your own weak-topic / confidence state — this is
+                  exactly what the plan below is based on.
                 </p>
                 <div className="texContractGroups">
                   {generatedPlan.topicContract.map((sec, i) => {
