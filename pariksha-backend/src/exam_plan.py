@@ -12,6 +12,7 @@ from google import genai
 from pydantic import BaseModel
 
 from src.config import settings
+from src.exam_patterns import pattern_prompt_block
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,8 @@ chapters from the section's valid-chapter list because the section itself was ra
     else:
         starting_point_block = "\nNo starting-point self-assessment was given - rely on attempt history alone; if that's empty too, treat this as a cold start and build a broad foundation plan.\n"
 
+    pattern_block = pattern_prompt_block(data.exam, data.stage)
+
     return f"""You are building a phased study plan for a student preparing for {data.exam} ({data.stage}).
 
 Days until the exam: {data.daysUntilExam}
@@ -142,6 +145,14 @@ Their current average accuracy across recent attempts: {data.currentAvgAccuracy}
 Their weakest topics right now (lowest accuracy first):
 {weak_lines}
 {starting_point_block}
+{pattern_block}
+Use the real exam pattern above as a second axis alongside weakness/confidence when choosing
+focusTopics: a topic that is BOTH weak/low-confidence AND heavily-weighted in the real exam (e.g.
+Puzzles & Seating Arrangement, Data Interpretation) deserves priority over an equally-weak topic
+that barely shows up in the real paper. Also use the sectional timing and strategy notes above to
+make phase descriptions concrete and exam-realistic (attempt order, time budget per section, which
+topics to triage vs skip) instead of generic study advice.
+
 Mock test cadence for this timeline (follow this - do not default to a flat ~15% regardless of
 how close the exam is): {_mock_guidance(data.daysUntilExam)}
 
