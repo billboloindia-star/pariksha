@@ -476,11 +476,13 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             <h1>How much do you already know?</h1>
             <p>Rate each section, or take a quick diagnostic and let your answers decide — your plan weighs this heavily when you have little or no practice history yet.</p>
           </div>
-          <div className="texCard">
+          <div className="texTargetShell texConfShell">
+            <div className="texContractGlow g1" />
+            <div className="texContractGlow g2" />
             {sectionNames.length === 0 ? (
-              <p className="texFieldHint">No bank sections found yet — the plan will lean on attempt history alone.</p>
+              <p className="texTargetHint">No bank sections found yet — the plan will lean on attempt history alone.</p>
             ) : (
-              sectionNames.map((s) => {
+              sectionNames.map((s, i) => {
                 const level = sectionLevels[s] ?? "average";
                 const accuracy = diagnosticAccuracy[s];
                 const hasDiagnostic = accuracy !== undefined;
@@ -489,30 +491,31 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                 const ratedChapterCount = Object.keys(sectionChapterLevels).length;
                 const expanded = expandedSection === s;
                 return (
-                  <div key={s} className="texConfRow">
-                    <div className="texConfTop">
-                      <span className="texConfName">{s}</span>
+                  <div key={s} className="texConfSection">
+                    <div className="texConfSectionHead">
+                      <span className="texContractSecDot" style={{ background: FOCUS_COLORS[s] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
+                      <span className="texConfSectionName">{s}</span>
                       {hasDiagnostic && (
-                        <span className="texConfDiagBadge">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22l9-12.5H12.5L13 2z" /></svg>
+                        <span className="texConfDiagBadge2">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22l9-12.5H12.5L13 2z" /></svg>
                           Diagnostic-calibrated · {accuracy}%
                         </span>
                       )}
                     </div>
-                    <div className="texConfBody">
-                      <div className="texLevelRow">
+                    <div className="texConfMeterRow">
+                      <div className="texLevelMeter">
                         {(["very_low", "average", "excellent"] as ConfidenceLevel[]).map((lv) => (
                           <button
                             key={lv}
-                            className={`texLevelBtn ${level === lv ? "active" : ""}`}
-                            style={level === lv ? { borderColor: LEVEL_META[lv].color, color: LEVEL_META[lv].color, background: `${LEVEL_META[lv].color}14` } : undefined}
+                            className={level === lv ? "active" : ""}
+                            style={level === lv ? { background: LEVEL_META[lv].color, borderColor: LEVEL_META[lv].color, boxShadow: `0 0 14px -2px ${LEVEL_META[lv].color}` } : undefined}
                             onClick={() => setSectionLevels((prev) => ({ ...prev, [s]: lv }))}
                           >
-                            {LEVEL_META[lv].label}
+                            <span>{LEVEL_META[lv].label}</span>
                           </button>
                         ))}
                       </div>
-                      <button className="texDiagBtn" onClick={() => startDiagnostic(s)}>
+                      <button className="texDiagBtn2" onClick={() => startDiagnostic(s)}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22l9-12.5H12.5L13 2z" /></svg>
                         {hasDiagnostic ? "Retake diagnostic" : "Quick diagnostic"}
                       </button>
@@ -520,33 +523,33 @@ export default function TargetExam({ onPracticeTopic }: Props) {
 
                     {chapters.length > 0 && !hasDiagnostic && (
                       <button
-                        className="texChapterToggle"
+                        className={`texChapterToggle2 ${expanded ? "open" : ""}`}
                         onClick={() => setExpandedSection(expanded ? null : s)}
                       >
-                        <svg className={`texChapterChevron ${expanded ? "open" : ""}`} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         {ratedChapterCount > 0 ? `${ratedChapterCount} of ${chapters.length} chapters rated individually` : `Rate individual chapters instead →`}
                       </button>
                     )}
 
                     {expanded && chapters.length > 0 && (
-                      <div className="texChapterList">
+                      <div className="texChapterList2">
                         {chapters.map((c) => {
                           const cLevel = sectionChapterLevels[c];
                           return (
-                            <div key={c} className="texChapterRow">
-                              <span className="texChapterName">{c}</span>
-                              <div className="texLevelRow sm">
+                            <div key={c} className="texChapterRow2">
+                              <span className="texChapterName2">{c}</span>
+                              <div className="texChapterMeter">
                                 {(["very_low", "average", "excellent"] as ConfidenceLevel[]).map((lv) => (
                                   <button
                                     key={lv}
-                                    className={`texLevelBtn sm ${cLevel === lv ? "active" : ""}`}
-                                    style={cLevel === lv ? { borderColor: LEVEL_META[lv].color, color: LEVEL_META[lv].color, background: `${LEVEL_META[lv].color}14` } : undefined}
+                                    className={cLevel === lv ? "active" : ""}
+                                    style={cLevel === lv ? { background: LEVEL_META[lv].color, borderColor: LEVEL_META[lv].color } : undefined}
                                     onClick={() => setChapterLevels((prev) => ({
                                       ...prev,
                                       [s]: { ...prev[s], [c]: lv },
                                     }))}
                                   >
-                                    {LEVEL_META[lv].label}
+                                    {{ very_low: "Low", average: "Avg", excellent: "High" }[lv]}
                                   </button>
                                 ))}
                               </div>
