@@ -2073,6 +2073,42 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 
 .texRefreshRow{display:flex;justify-content:flex-end}
 
+/* ---- Target Exam dashboard: dark console for the cards below the hero ---- */
+.texDashDark .card{background:#0b1626;border-color:#1c2d45;color:#fff}
+.texDashDark .texCardSub{color:#8296b3}
+.texDashDark .muted.small{color:#8296b3;font-size:12.5px}
+.texDashDark .texTaskRow{border-bottom-color:#1c2d45}
+.texDashDark .texTaskCheck{border-color:#263a55}
+.texDashDark .texTaskCheck.done{background:#4fd18b;border-color:#4fd18b;color:#06230f}
+.texDashDark .texTaskName{color:#fff}
+.texDashDark .texTaskRow.done .texTaskName{color:#5c7191}
+.texDashDark .texTaskMeta{color:#5c7191}
+.texDashDark .texTaskGo{background:linear-gradient(135deg,#3fa5ff,#2170c9)}
+.texDashDark .texTaskProgressTrack{background:#1c2d45}
+.texDashDark .texTaskProgressFill{background:#4fd18b}
+.texDashDark .texTaskProgressLbl{color:#5c7191}
+
+.texDashDark .texCalLegend{color:#5c7191}
+.texDashDark .texCalCell{background:#0d1a2c}
+.texDashDark .texCalCell.l1{background:rgba(79,209,139,.25)}
+.texDashDark .texCalCell.l2{background:rgba(79,209,139,.5)}
+.texDashDark .texCalCell.l3{background:#4fd18b}
+.texDashDark .texCalCell.miss{background:rgba(255,122,122,.2);border:1px solid rgba(255,122,122,.4)}
+.texDashDark .texCalStatsRow{border-top-color:#1c2d45}
+.texDashDark .texCalStat span{color:#5c7191}
+
+.texDashDark .texPhaseSeg{background:#0e1c30;color:#5c7191}
+.texDashDark .texPhaseSeg.done{background:#4fd18b;color:#06230f}
+.texDashDark .texPhaseSeg.current{background:linear-gradient(135deg,#3fa5ff,#2170c9);color:#fff}
+.texDashDark .texPhaseNote{color:#8296b3}
+.texDashDark .texPhaseNote b{color:#fff}
+
+.texDashDark .texAdaptItem p{color:#8296b3}
+.texDashDark .texAdaptItem b{color:#fff}
+.texDashDark .texAdaptDate{color:#5c7191}
+
+.texDashDark .texRefreshRow .btn{background:#0e1c30;border-color:#263a55;color:#fff}
+
 @media (max-width:900px){
   .texExamGrid{grid-template-columns:repeat(2,1fr)}
   .texHeroGrid{grid-template-columns:1fr}

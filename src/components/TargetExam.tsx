@@ -874,7 +874,7 @@ function TargetExamDashboard({
   }
 
   return (
-    <div className="home pgWide">
+    <div className="home pgWide texDashDark">
       {showWarning && (
         <div className="texWarnBanner">
           <span className="texWarnIcon">⚠️</span>
@@ -999,7 +999,7 @@ function TargetExamDashboard({
           <div className="texPhaseStrip">
             {state.plan.phases.map((p, i) => (
               <div key={i} className={`texPhaseSeg ${i < state.currentPhaseIndex ? "done" : ""} ${i === state.currentPhaseIndex ? "current" : ""}`} title={p.label}>
-                Wk {Math.round(p.startDay / 7) + 1}
+                Wk {Math.round(p.startDay / 7) + 1}–{Math.round(p.endDay / 7)}
               </div>
             ))}
           </div>
