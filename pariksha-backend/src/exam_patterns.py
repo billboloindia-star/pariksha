@@ -1,13 +1,19 @@
 """Real-world exam pattern reference data for the 6 predefined Target Exams -
-sectional structure, timing, and approximate topic-wise question weightage
-from previous years, used to bias the AI study planner toward topics that are
-actually heavily tested, not just toward whatever the user happens to be weak
-at. None of IBPS/SBI publish an official topic-wise blueprint, so the
-weightage figures here are coaching-institute consensus estimates (Oliveboard,
-BankersAdda, PracticeMock, etc.) cross-checked across several sources as of
-Nov 2026 - they drift a little year to year and should be treated as
-directional, not exact. Said so explicitly wherever this data reaches the
-Gemini prompt, so the model doesn't present it as hard fact either.
+sectional structure, timing, and topic-wise question weightage from previous
+years, used to bias the AI study planner toward topics that are actually
+heavily tested, not just toward whatever the user happens to be weak at.
+
+Provenance varies by exam and is noted in each one's comment:
+- RRB PO Prelims and RRB Clerk Prelims are backed by REAL tallied PYQ papers
+  (memory-based reconstructions, question-by-question topic classification),
+  not estimates - see the comment above each.
+- Everything else is coaching-institute consensus (Oliveboard, BankersAdda,
+  PracticeMock, etc.) cross-checked across several sources as of Nov 2026,
+  since IBPS/SBI don't publish an official topic-wise blueprint. These drift
+  a little year to year and should be treated as directional, not exact.
+
+Either way, this is said explicitly wherever the data reaches the Gemini
+prompt, so the model doesn't present any of it as harder fact than it is.
 """
 
 from dataclasses import dataclass
@@ -30,6 +36,9 @@ class StagePattern:
     sectional_timer: bool  # each section has its own hard time limit, no borrowing
     sections: List[SectionPattern]
     strategy: str
+    # "pyq": tallied directly from real previous-year question papers.
+    # "estimate": coaching-institute consensus, no official blueprint exists.
+    source: str = "estimate"
 
 
 # Keyed by (examName, stage). "both" falls back to prelims (the gateway stage).
@@ -274,19 +283,31 @@ EXAM_PATTERNS: Dict[str, Dict[str, StagePattern]] = {
         ),
     },
     "RRB PO": {
+        # Prelims section below is from REAL tallied PYQ data (not an estimate):
+        # the 22-Nov-2025 1st-shift memory-based paper, fully read and classified
+        # question-by-question - Reasoning Q1-40 read directly from the source PDF,
+        # Quant from a previously-ingested topic-tagged transcript (Q41-76 of 80;
+        # the source paper's last 4 quant questions weren't captured, so that
+        # section's count is "of 36 tallied", not "of 40").
         "prelims": StagePattern(
             total_questions=80, total_marks=80, total_minutes=45, sectional_timer=False,
             sections=[
                 SectionPattern("Reasoning", 40, 20, {
-                    "Puzzles & Seating Arrangement": "15-18",
-                    "Syllogism / Inequality": "8-10",
-                    "Alphanumeric Series, Coding-Decoding, misc": "10-15",
+                    "Puzzles & Seating Arrangement (circular/linear/box/floor, all variants combined)": "23 of 40 - dominant, well over half the section",
+                    "Syllogism": "4",
+                    "Inequality": "3",
+                    "Direction Sense": "3",
+                    "Blood Relation / Family": "3",
+                    "Number-based (digit pairs/manipulation)": "2",
+                    "Alphabet Classification": "1",
+                    "Word Formation": "1",
                 }),
                 SectionPattern("Quant", 40, 25, {
-                    "Simplification / Approximation": "8-10",
-                    "Data Interpretation": "8-10",
-                    "Number Series": "5",
-                    "Arithmetic miscellaneous": "12-15",
+                    "Data Interpretation": "10 of 36 tallied",
+                    "Arithmetic (Average/Ratio/SI-CI/Profit-Loss/Time-Work etc.)": "10 of 36 tallied",
+                    "Approximation": "6 of 36 tallied",
+                    "Quadratic Equations": "5 of 36 tallied",
+                    "Number Series": "5 of 36 tallied",
                 }),
             ],
             strategy=(
@@ -294,8 +315,12 @@ EXAM_PATTERNS: Dict[str, Dict[str, StagePattern]] = {
                 "like IBPS/SBI - you can shift time between Reasoning and Quant as needed, which is a "
                 "real tactical difference worth planning around (e.g. banking extra time from a strong "
                 "section into a weaker one). Slightly shorter and less dense than IBPS/SBI Prelims (80 "
-                "vs 100 questions), with no English section at this stage."
+                "vs 100 questions), with no English section at this stage. Puzzles alone eat well over "
+                "half the Reasoning section in real papers - strong puzzle-solving speed matters more "
+                "here than almost anywhere else in the syllabus; Quant is comparatively balanced across "
+                "its top 4-5 topics, so no single quant topic carries the section the way puzzles do."
             ),
+            source="pyq",
         ),
         "mains": StagePattern(
             total_questions=200, total_marks=200, total_minutes=120, sectional_timer=False,
@@ -328,26 +353,40 @@ EXAM_PATTERNS: Dict[str, Dict[str, StagePattern]] = {
         ),
     },
     "RRB Clerk": {
+        # Prelims section below is from REAL tallied PYQ data (not an estimate):
+        # a fully topic-tagged IBPS RRB Clerk Prelims 2024 memory-based paper
+        # (10 Aug 2024, 2nd shift), both sections complete at 40/40 questions each.
         "prelims": StagePattern(
             total_questions=80, total_marks=80, total_minutes=45, sectional_timer=False,
             sections=[
                 SectionPattern("Reasoning", 40, 20, {
-                    "Puzzles & Seating Arrangement": "15-18",
-                    "Syllogism / Inequality": "8-10",
-                    "Alphanumeric Series, Coding-Decoding, misc": "10-15",
+                    "Puzzles & Seating Arrangement (circular/linear/floor combined)": "15 of 40",
+                    "Word Series": "5",
+                    "Alphanumeric Series": "5",
+                    "Direction Sense": "3",
+                    "Syllogism": "3",
+                    "Ranking and Order": "3",
+                    "Number-based": "2",
+                    "Inequality": "2",
+                    "Word Formation": "1",
+                    "Coding-Decoding": "1",
                 }),
                 SectionPattern("Quant", 40, 25, {
-                    "Simplification / Approximation": "10-12 (biggest single topic - built for speed)",
-                    "Data Interpretation": "8-10",
-                    "Number Series": "5",
-                    "Arithmetic miscellaneous": "10-12",
+                    "Simplification": "15 of 40 - by far the biggest single topic, built for speed",
+                    "Data Interpretation": "10 of 40",
+                    "Number Series": "5 of 40",
+                    "Arithmetic miscellaneous (Mensuration, Partnership, Time-Speed-Distance, "
+                    "Mixture-Alligation, Profit-Loss, SI, Average, Ages, Time-Work, Percentage)": "10 of 40, 1 each",
                 }),
             ],
             strategy=(
                 "Same composite-timing structure as RRB PO Prelims (45 min total, no hard per-section "
-                "split). Office Assistant Quant leans slightly more toward quick Simplification/"
-                "Approximation than RRB PO's does."
+                "split). Simplification alone is a real third of the Quant section here (15 of 40 in "
+                "tallied papers) - speed drilling on it has an outsized payoff. Reasoning is still "
+                "puzzle-heavy but noticeably less puzzle-concentrated than RRB PO's paper was, with more "
+                "weight spread across Word/Alphanumeric Series."
             ),
+            source="pyq",
         ),
         "mains": StagePattern(
             total_questions=200, total_marks=200, total_minutes=120, sectional_timer=False,
@@ -394,7 +433,7 @@ def pattern_prompt_block(exam: str, stage: str) -> str:
         return ""
     sec_lines = []
     for s in p.sections:
-        topic_lines = "\n".join(f"      - {topic}: ~{count} questions" for topic, count in s.topic_weightage.items())
+        topic_lines = "\n".join(f"      - {topic}: {count}" for topic, count in s.topic_weightage.items())
         sec_lines.append(f"  - {s.name}: {s.questions} questions, {s.minutes} min\n{topic_lines}")
     timer_note = (
         "Each section above has its OWN hard time limit with no borrowing between sections."
@@ -402,9 +441,15 @@ def pattern_prompt_block(exam: str, stage: str) -> str:
         "Timing is COMPOSITE across the whole paper (no per-section split) - time can be shifted "
         "between sections, which is a real tactical difference worth factoring into the plan."
     )
+    provenance = (
+        "tallied directly from real previous-year question papers, question by question - this is "
+        "measured data, not a guess"
+        if p.source == "pyq" else
+        "coaching-institute consensus estimates, not an official IBPS/SBI blueprint - directional, "
+        "not exact, but far better signal than guessing"
+    )
     return f"""
-Real exam pattern for {exam} ({stage}), from previous years (coaching-institute consensus estimates,
-not an official IBPS/SBI blueprint - directional, not exact, but far better signal than guessing):
+Real exam pattern for {exam} ({stage}), from previous years ({provenance}):
 Total: {p.total_questions} questions, {p.total_marks} marks, {p.total_minutes} minutes. {timer_note}
 {chr(10).join(sec_lines)}
 
