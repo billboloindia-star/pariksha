@@ -17,6 +17,7 @@ provider:
     LIBRARY_BUCKET: pariksha-library-${self:provider.stage}-${aws:accountId}
     BANK_TABLE: pariksha-bank-${self:provider.stage}
     BANK_IMAGES_BUCKET: pariksha-bank-images-${self:provider.stage}-${aws:accountId}
+    TARGET_EXAM_TABLE: pariksha-target-exam-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -54,6 +55,12 @@ provider:
           Resource:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BANK_TABLE}
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BANK_TABLE}/index/*
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.TARGET_EXAM_TABLE}
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -167,6 +174,18 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+    TargetExamTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TARGET_EXAM_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
 
     LibraryBucket:
       Type: AWS::S3::Bucket

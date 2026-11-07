@@ -187,3 +187,75 @@ class PracticePaperRequest(BaseModel):
     count: int = 20
     durationMinutes: int = 20
     negativeMarking: float = 0.25
+
+
+class TargetExamPhase(BaseModel):
+    label: str
+    weeks: float
+    description: str
+    focusTopics: List[str] = []
+    # Computed server-side from `weeks` once a plan is accepted (day offsets
+    # from acceptedAt) - not set by Gemini, filled in by /target-exam/accept.
+    startDay: int = 0
+    endDay: int = 0
+
+
+class TargetExamPlan(BaseModel):
+    phases: List[TargetExamPhase]
+    focusDistribution: Dict[str, float]
+    dailyHoursEstimate: float
+
+
+class TargetExamGenerateRequest(BaseModel):
+    exam: str
+    stage: str
+    examDate: str  # ISO date, "2026-12-19"
+    targetCutoff: float
+
+
+class TargetExamAcceptRequest(BaseModel):
+    exam: str
+    stage: str
+    examDate: str
+    targetCutoff: float
+    plan: TargetExamPlan
+
+
+class AdaptiveLogEntry(BaseModel):
+    date: int
+    message: str
+    detail: str
+    kind: str = "info"  # info | warning | good
+
+
+class TargetExamTask(BaseModel):
+    topic: str
+    label: str
+    meta: str
+    done: bool
+
+
+class CalendarDay(BaseModel):
+    date: str  # "2026-11-07"
+    level: str  # "0" | "1" | "2" | "3" | "miss"
+
+
+class TargetExamState(BaseModel):
+    exam: str
+    stage: str
+    examDate: str
+    targetCutoff: float
+    createdAt: int
+    acceptedAt: int
+    plan: TargetExamPlan
+    adaptiveLog: List[AdaptiveLogEntry] = []
+    # Computed fresh on every GET, never persisted.
+    daysLeft: int
+    currentAvgAccuracy: float
+    readiness: int
+    readinessStatus: str  # "ahead" | "on_track" | "behind"
+    streak: int
+    currentPhaseIndex: int
+    todayTasks: List[TargetExamTask]
+    calendar: List[CalendarDay]
+    missedDaysThisWeek: int
