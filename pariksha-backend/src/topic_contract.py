@@ -62,7 +62,9 @@ class ChapterPick:
 @dataclass
 class TopicBucket:
     label: str
-    weightNote: str  # the human-readable real-exam-weight string, shown to the user
+    weightNote: str  # the full human-readable real-exam-weight string (detail/tooltip use)
+    weightCount: float  # parsed representative question count, e.g. 23.5 - for a clean "24/40" badge
+    sectionTotal: int  # the section's total question count, e.g. 40 - the badge's denominator
     chapters: List[ChapterPick] = field(default_factory=list)
 
 
@@ -175,7 +177,7 @@ def build_contract(
                 else:
                     reason = "no signal yet - included for real-exam coverage"
                 picks.append(ChapterPick(chapter=c, reason=reason))
-            buckets.append(TopicBucket(label=label, weightNote=note, chapters=picks))
+            buckets.append(TopicBucket(label=label, weightNote=note, weightCount=weight, sectionTotal=sp.questions, chapters=picks))
 
         all_matched_pool = {c for cs in bucket_matches.values() for c in cs}
         unmatched = [c for c in bank_chapters if c not in all_matched_pool]

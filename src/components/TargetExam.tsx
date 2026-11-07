@@ -72,6 +72,13 @@ function levelFromAccuracy(accuracy: number): ConfidenceLevel {
   return "excellent";
 }
 
+/** Strips a topic bucket's trailing parenthetical hint ("Arithmetic
+ * (Average/Ratio/...)" -> "Arithmetic") - the real chapters are already
+ * shown as chips below it, so the generic hint list is redundant clutter. */
+function bucketLabel(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, "");
+}
+
 function fmtDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -626,27 +633,34 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                   state — not the AI's own guess. This is exactly what the plan below is built around.
                 </p>
                 <div className="texContractGroups">
-                  {generatedPlan.topicContract.map((sec, i) => (
-                    <div key={sec.section} className="texContractSection">
-                      <div className="texFocusGroupHead">
-                        <span className="texFocusGroupDot" style={{ background: FOCUS_COLORS[sec.section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
-                        <span className="texFocusGroupName">{sec.section}</span>
-                      </div>
-                      {sec.buckets.map((b) => (
-                        <div key={b.label} className="texContractBucket">
-                          <div className="texContractBucketHead">
-                            <span className="texContractBucketLabel">{b.label}</span>
-                            <span className="texContractBucketWeight">real exam weight: {b.weightNote}</span>
-                          </div>
-                          <div className="texFocusChips">
-                            {b.chapters.map((c) => (
-                              <span key={c.chapter} className="texFocusChip" title={c.reason}>{c.chapter}</span>
-                            ))}
-                          </div>
+                  {generatedPlan.topicContract.map((sec, i) => {
+                    const accent = FOCUS_COLORS[sec.section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length];
+                    const maxWeight = Math.max(1, ...sec.buckets.map((b) => b.weightCount));
+                    return (
+                      <div key={sec.section} className="texContractSection">
+                        <div className="texFocusGroupHead">
+                          <span className="texFocusGroupDot" style={{ background: accent }} />
+                          <span className="texFocusGroupName">{sec.section}</span>
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        {sec.buckets.map((b) => (
+                          <div key={b.label} className="texContractBucket">
+                            <div className="texContractBucketHead">
+                              <span className="texContractBucketLabel" title={b.weightNote}>{bucketLabel(b.label)}</span>
+                              <span className="texContractBucketBadge" title={b.weightNote}>~{Math.round(b.weightCount)}/{b.sectionTotal}</span>
+                            </div>
+                            <div className="texContractBar">
+                              <span className="texContractBarFill" style={{ width: `${(b.weightCount / maxWeight) * 100}%`, background: accent }} />
+                            </div>
+                            <div className="texFocusChips">
+                              {b.chapters.map((c) => (
+                                <span key={c.chapter} className="texFocusChip" title={c.reason}>{c.chapter}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             ) : (

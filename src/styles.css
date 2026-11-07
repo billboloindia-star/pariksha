@@ -1827,10 +1827,15 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texContractGroups{display:flex;flex-direction:column;gap:22px;margin-top:14px}
 .texContractSection{padding-bottom:18px;border-bottom:1px solid var(--line)}
 .texContractSection:last-child{border-bottom:none;padding-bottom:0}
-.texContractBucket{margin:12px 0 0 16px}
-.texContractBucketHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px;flex-wrap:wrap}
-.texContractBucketLabel{font-size:12.5px;font-weight:700;color:var(--ink)}
-.texContractBucketWeight{font-size:11px;color:var(--dim);font-weight:600;white-space:nowrap}
+.texContractBucket{margin:14px 0 0 16px}
+.texContractBucketHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.texContractBucketLabel{font-size:12.5px;font-weight:700;color:var(--ink);cursor:default;border-bottom:1px dotted var(--line-2)}
+.texContractBucketBadge{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);background:var(--soft);
+  padding:2px 8px;border-radius:999px;white-space:nowrap;cursor:default;
+}
+.texContractBar{height:4px;border-radius:2px;background:var(--soft);overflow:hidden;margin-bottom:9px;max-width:280px}
+.texContractBarFill{display:block;height:4px;border-radius:2px}
 
 .texPhaseTimeline{position:relative;margin-top:14px;padding-left:22px;border-left:2px solid var(--line)}
 .texPhaseItem{position:relative;padding-bottom:18px}

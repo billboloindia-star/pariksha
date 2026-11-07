@@ -208,6 +208,8 @@ class TopicContractChapter(BaseModel):
 class TopicContractBucket(BaseModel):
     label: str
     weightNote: str
+    weightCount: float
+    sectionTotal: int
     chapters: List[TopicContractChapter]
 
 

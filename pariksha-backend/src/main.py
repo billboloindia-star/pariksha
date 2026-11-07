@@ -951,7 +951,7 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
             unmatched=sec.unmatched,
             buckets=[
                 TopicContractBucket(
-                    label=b.label, weightNote=b.weightNote,
+                    label=b.label, weightNote=b.weightNote, weightCount=b.weightCount, sectionTotal=b.sectionTotal,
                     chapters=[TopicContractChapter(chapter=p.chapter, reason=p.reason) for p in b.chapters],
                 )
                 for b in sec.buckets
