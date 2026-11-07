@@ -307,12 +307,12 @@ EXAM_PATTERNS: Dict[str, Dict[str, StagePattern]] = {
                     "Alphabet Classification": "~1 of 40 (6 of 320)",
                 }),
                 SectionPattern("Quant", 40, 25, {
-                    "Arithmetic (Average/Ratio/SI-CI/Profit-Loss/Time-Work/Partnership/Mixture etc.)": "~25-26 of 40 (102 of 316)",
-                    "Data Interpretation": "~24-25 of 40 (97 of 316) - essentially tied with Arithmetic as the biggest topic, NOT a distant second as a single-paper sample would suggest",
-                    "Approximation": "~11 of 40 (45 of 316) - the most CONSISTENT quant topic, present in every single paper at a stable count",
-                    "Number Series": "~11 of 40 (43 of 316) - equally consistent, present every paper",
-                    "Quadratic Equations": "~13 of 40 when present (26 of 316) - but present in only 5 of the 8 papers as one contiguous 5-6 question block; absent entirely in the other 3",
-                    "Data Sufficiency (Statement I/II or Quantity I/II format)": "rare - only 3 of 316 total, seen in 2 of 8 papers",
+                    "Arithmetic (Average/Ratio/SI-CI/Profit-Loss/Time-Work/Partnership/Mixture etc.)": "~13 of 40 (102 of 316)",
+                    "Data Interpretation": "~12 of 40 (97 of 316) - essentially tied with Arithmetic as the biggest topic, NOT a distant second as a single-paper sample would suggest",
+                    "Approximation": "~6 of 40 (45 of 316) - the most CONSISTENT quant topic, present in every single paper at a stable count",
+                    "Number Series": "~5 of 40 (43 of 316) - equally consistent, present every paper",
+                    "Quadratic Equations": "~5 of 40 when present (26 of 316, across the 5 papers that had it) - but present in only 5 of the 8 papers as one contiguous 5-6 question block; absent entirely in the other 3",
+                    "Data Sufficiency (Statement I/II or Quantity I/II format)": "rare - under 1 of 40 on average (3 of 316 total), seen in 2 of 8 papers",
                 }),
             ],
             strategy=(
