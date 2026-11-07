@@ -6,7 +6,7 @@ Vault just works."""
 
 import json
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from google import genai
 from pydantic import BaseModel
@@ -40,7 +40,11 @@ class ExamPlanInput(BaseModel):
     targetCutoff: float
     currentAvgAccuracy: float
     weakTopics: List[WeakTopicInput]
-    availableChapters: List[str]  # exact bank chapter names - the only valid focusTopic values
+    # Exact bank chapter names, grouped by section - the only valid focusTopic
+    # values. Grouped (not a flat list) so the model can actually see which
+    # section each chapter belongs to and give every section fair coverage,
+    # instead of guessing from the chapter name text alone.
+    chaptersBySection: Dict[str, List[str]]
     # Self-reported (or diagnostic-measured) starting point per section - mainly
     # useful for a cold-start user with little/no attempt history, where
     # weakTopics alone has nothing to go on.
@@ -91,7 +95,11 @@ def _build_prompt(data: ExamPlanInput) -> str:
     weak_lines = "\n".join(
         f"- {t.topic}: {t.accuracy}% accuracy over {t.attempts} attempts" for t in data.weakTopics
     ) or "- No attempt history yet."
-    chapters_lines = "\n".join(f"- {c}" for c in data.availableChapters[:400])
+    chapters_lines = "\n".join(
+        f"## {section}\n" + "\n".join(f"- {c}" for c in chapters[:80])
+        for section, chapters in data.chaptersBySection.items()
+    )
+    section_names = list(data.chaptersBySection.keys())
 
     if data.sectionConfidence:
         conf_lines = "\n".join(
@@ -121,7 +129,9 @@ Mock test cadence for this timeline (follow this - do not default to a flat ~15%
 how close the exam is): {_mock_guidance(data.daysUntilExam)}
 
 The ONLY valid chapter names you may use in "focusTopics" (use the exact string as given, do not
-paraphrase, abbreviate, or invent a new chapter name):
+paraphrase, abbreviate, or invent a new chapter name), grouped by section so you know exactly
+which section each one belongs to - every section listed here ({", ".join(section_names)}) needs
+real representation in the plan, not just the one or two sections with the most attempt history:
 {chapters_lines}
 
 Write a phased study plan as JSON only - no markdown fences, no commentary. Match this exact shape:
@@ -146,6 +156,13 @@ Rules:
 - Every other phase's focusTopics must be chosen from the "valid chapter names" list above,
   weighted toward the weakest topics given - do not pick topics the student is already strong at
   except lightly in a later phase as upkeep.
+- Coverage across sections must be fair, not dominated by whichever section happens to have the
+  most attempt-history rows. Count the TOTAL focusTopics you pick for each section across all
+  phases combined: a section rated "Excellent" (and with no diagnostic contradicting that) can
+  reasonably get few or none, but any section rated "Very low" or "Average" must get a real,
+  comparable share - do not let one section end up with 8-10 topics while another sits at 1-2
+  when both were rated similarly. If a section's own weak-topic/attempt signal is thin, pull more
+  of its focusTopics straight from that section's own chapter list above instead of skipping it.
 - focusDistribution values are percentages across study time (by section name, e.g. "Reasoning",
   "Quant"), must sum to 100, weighted toward whichever sections are weakest - factor in the
   starting-point self-assessment above too, not just attempt history, especially for a student

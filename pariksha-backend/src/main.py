@@ -9,7 +9,7 @@ import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from typing import List
+from typing import Dict, List
 
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
@@ -699,18 +699,31 @@ def _attempt_accuracy(a: dict) -> float:
     return round(a.get("correct", 0) / attempted * 100)
 
 
-def _weak_topics_for_plan(attempts: list) -> List[WeakTopicInput]:
+def _weak_topics_for_plan(attempts: list, chapter_to_section: dict) -> List[WeakTopicInput]:
+    """Weakest topics, balanced across sections (up to 6 per section, ~20 total)
+    instead of one flat top-12 - a section with more total attempt volume
+    would otherwise crowd out a thinner-but-equally-weak section entirely
+    (e.g. 10 Reasoning topics vs 2 Quant ones for an identical confidence
+    rating), starving the planner of any signal to put real Quant time in."""
     agg: dict = defaultdict(lambda: {"ok": 0, "att": 0})
     for a in attempts:
         for topic, tally in (a.get("byTopic") or {}).items():
             agg[topic]["ok"] += int(tally.get("ok", 0))
             agg[topic]["att"] += int(tally.get("att", 0))
-    out = [
-        WeakTopicInput(topic=t, accuracy=round(v["ok"] / v["att"] * 100) if v["att"] else 0, attempts=v["att"])
-        for t, v in agg.items() if v["att"] > 0
-    ]
+
+    by_section: dict = defaultdict(list)
+    for t, v in agg.items():
+        if v["att"] <= 0:
+            continue
+        w = WeakTopicInput(topic=t, accuracy=round(v["ok"] / v["att"] * 100), attempts=v["att"])
+        by_section[chapter_to_section.get(t, "Other")].append(w)
+
+    out: List[WeakTopicInput] = []
+    for topics in by_section.values():
+        topics.sort(key=lambda w: w.accuracy)
+        out.extend(topics[:6])
     out.sort(key=lambda w: w.accuracy)
-    return out
+    return out[:20]
 
 
 def _recent_avg_accuracy(attempts: list, days: int) -> float:
@@ -842,20 +855,22 @@ def _maybe_append_adaptive_log(log: List[AdaptiveLogEntry], missed_week: int, at
             ))
 
 
-def _bank_chapter_names(email: str) -> List[str]:
+def _bank_chapters_by_section(email: str) -> Dict[str, List[str]]:
     items = _query_all(
         bank_table,
         KeyConditionExpression=Key("userId").eq(email),
-        ProjectionExpression="chapter",
+        ProjectionExpression="#sec, chapter",
+        ExpressionAttributeNames={"#sec": "section"},
     )
-    seen = []
-    s = set()
+    out: Dict[str, List[str]] = {}
+    seen: set = set()
     for it in items:
-        c = it.get("chapter")
-        if c and c not in s:
-            s.add(c)
-            seen.append(c)
-    return seen
+        sec, ch = it.get("section"), it.get("chapter")
+        if not sec or not ch or (sec, ch) in seen:
+            continue
+        seen.add((sec, ch))
+        out.setdefault(sec, []).append(ch)
+    return out
 
 
 def _target_exam_state(email: str, item: dict) -> TargetExamState:
@@ -906,9 +921,10 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
 def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depends(require_premium)):
     attempts = _query_all(attempts_table, KeyConditionExpression=Key("userId").eq(email))
     attempts = [_from_decimal(a) for a in attempts]
-    weak = _weak_topics_for_plan(attempts)[:12]
+    chapters_by_section = _bank_chapters_by_section(email)
+    chapter_to_section = {c: sec for sec, chs in chapters_by_section.items() for c in chs}
+    weak = _weak_topics_for_plan(attempts, chapter_to_section)
     current_avg = _recent_avg_accuracy(attempts, days=14)
-    chapters = _bank_chapter_names(email)
 
     try:
         exam_date = date.fromisoformat(body.examDate)
@@ -920,7 +936,7 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
         out = _planner.generate(ExamPlanInput(
             exam=body.exam, stage=body.stage, daysUntilExam=days_until,
             targetCutoff=body.targetCutoff, currentAvgAccuracy=current_avg,
-            weakTopics=weak, availableChapters=chapters,
+            weakTopics=weak, chaptersBySection=chapters_by_section,
             sectionConfidence=[SectionConfidenceInput(**c.model_dump()) for c in body.sectionConfidence],
         ))
     except Exception:
