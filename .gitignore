@@ -1,6 +1,11 @@
 node_modules/
 dist/
+.serverless/
 *.log
 .DS_Store
 .env
+.env.local
 *.tsbuildinfo
+after-*.png
+item-detail.png
+vault-page.png

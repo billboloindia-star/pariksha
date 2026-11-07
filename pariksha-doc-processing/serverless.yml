@@ -1,0 +1,61 @@
+service: pariksha-doc-processing
+
+provider:
+  name: aws
+  profile: billbolo
+  runtime: python3.12
+  region: ap-south-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 1024
+  timeout: 30
+
+  environment:
+    LIBRARY_TABLE: pariksha-library-${self:provider.stage}
+    BANK_IMAGES_BUCKET: pariksha-bank-images-${self:provider.stage}-${aws:accountId}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+          Resource: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.LIBRARY_TABLE}
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource: arn:aws:s3:::pariksha-library-${self:provider.stage}-${aws:accountId}/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource: arn:aws:s3:::${self:provider.environment.BANK_IMAGES_BUCKET}/*
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+
+functions:
+  # One function per document-processing capability. pdfThumbnail is the
+  # first; future ones (OCR, DOCX/XLSX parsing, etc.) land here too, each
+  # with its own handler file and, where it makes sense, its own trigger -
+  # they all share this service's IAM/infra conventions rather than each
+  # needing a brand new serverless stack.
+  pdfThumbnail:
+    handler: src/pdf_thumbnail.handle
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    events:
+      - s3:
+          bucket: pariksha-library-${self:provider.stage}-${aws:accountId}
+          event: s3:ObjectCreated:*
+          existing: true
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer: true
+    slim: true
+    strip: true
+    useDownloadCache: true
+    useStaticCache: true

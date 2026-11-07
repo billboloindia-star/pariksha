@@ -16,6 +16,7 @@ provider:
     LIBRARY_TABLE: pariksha-library-${self:provider.stage}
     LIBRARY_BUCKET: pariksha-library-${self:provider.stage}-${aws:accountId}
     BANK_TABLE: pariksha-bank-${self:provider.stage}
+    BANK_IMAGES_BUCKET: pariksha-bank-images-${self:provider.stage}-${aws:accountId}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -59,6 +60,12 @@ provider:
             - s3:GetObject
             - s3:DeleteObject
           Resource: arn:aws:s3:::${self:provider.environment.LIBRARY_BUCKET}/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: arn:aws:s3:::${self:provider.environment.BANK_IMAGES_BUCKET}/*
         - Effect: Allow
           Action:
             - logs:CreateLogGroup
@@ -181,6 +188,40 @@ resources:
                 - https://pariksha.billbolo.in
                 - http://localhost:5173
               AllowedHeaders: ['*']
+
+    # Public-read bucket for Master Vault question diagrams (DI pie/bar/line
+    # charts etc.) — deliberately public, unlike LibraryBucket, since these
+    # need to load directly as <img> URLs in exam/practice screens with no
+    # auth/presigning round trip, and carry no sensitive content (they're
+    # just question artwork cropped losslessly from the source PDFs).
+    BankImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.BANK_IMAGES_BUCKET}
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods: [GET]
+              AllowedOrigins: ['*']
+              AllowedHeaders: ['*']
+
+    BankImagesBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref BankImagesBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action: s3:GetObject
+              Resource: arn:aws:s3:::${self:provider.environment.BANK_IMAGES_BUCKET}/*
 
 custom:
   pythonRequirements:

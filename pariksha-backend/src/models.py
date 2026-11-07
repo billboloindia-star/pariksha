@@ -89,6 +89,23 @@ class LibraryItem(BaseModel):
     files: List[LibraryFile]
     createdAt: int
     paper: Optional[Dict] = None
+    # Set on every response. On the paginated list endpoint `paper` itself is
+    # omitted (a full item can embed 30-50 questions - sending all of a
+    # user's items with their full papers inline blew past a few MB and
+    # made the page time out), so the list view needs these two fields to
+    # know whether a paper exists and how big it is without the payload.
+    hasPaper: bool = False
+    questionCount: Optional[int] = None
+    # A real render of the first PDF page (page.get_pixmap - same pixel-crop
+    # approach already used for the DI chart images, never a drawn mock),
+    # uploaded to the public bank-images bucket. None for image uploads or
+    # if rendering failed - the frontend falls back to a generic icon then.
+    thumbnailUrl: Optional[str] = None
+
+
+class LibraryListResponse(BaseModel):
+    items: List[LibraryItem]
+    nextCursor: Optional[str] = None
 
 
 class LibraryFileLink(BaseModel):

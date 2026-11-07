@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function MobileNav({ active, onNavigate, session, onLogout }: Props) {
-  const items = hubItems();
+  const items = hubItems(session);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +61,7 @@ export default function MobileNav({ active, onNavigate, session, onLogout }: Pro
             onClick={() => onNavigate(it.phase)}
           >
             {it.icon}
-            <span>{it.label === "Past attempts" ? "Attempts" : it.label === "Paper vault" ? "Vault" : it.label}</span>
+            <span>{it.label === "Paper vault" ? "Vault" : it.label === "Master Vault" ? "Bank" : it.label}</span>
           </button>
         ))}
       </nav>

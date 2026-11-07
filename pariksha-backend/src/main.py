@@ -1,6 +1,7 @@
 """Pariksha backend: email/password accounts + attempt history, on AWS Lambda."""
 
 import base64
+import json
 import random
 import time
 import uuid
@@ -29,6 +30,7 @@ from src.models import (
     Credentials,
     LibraryFileLink,
     LibraryItem,
+    LibraryListResponse,
     LibrarySavePaper,
     LibraryUpload,
     MeResponse,
@@ -77,6 +79,21 @@ def _normalise_email(raw: str) -> str:
     if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Enter a valid email address.")
     return email
+
+
+def _query_all(table, **kwargs) -> list:
+    """DynamoDB Query caps a single response at ~1MB - a single call silently
+    truncates once a user's data grows past that (confirmed on the bank
+    table at 8k+ questions, and again on the library table once items
+    started embedding a full 30-50 question paper each), so every read
+    loops on LastEvaluatedKey until it's genuinely exhausted."""
+    items: list = []
+    res = table.query(**kwargs)
+    items.extend(res.get("Items", []))
+    while "LastEvaluatedKey" in res:
+        res = table.query(ExclusiveStartKey=res["LastEvaluatedKey"], **kwargs)
+        items.extend(res.get("Items", []))
+    return items
 
 
 @app.post("/auth/signup", response_model=AuthResponse)
@@ -164,10 +181,70 @@ def _library_key(email: str, item_id: str, file_name: str) -> str:
     return f"{email}/{item_id}/{file_name}"
 
 
-@app.get("/library", response_model=List[LibraryItem])
-def list_library(email: str = Depends(get_current_email)):
-    res = library_table.query(KeyConditionExpression=Key("userId").eq(email), ScanIndexForward=False)
-    return [_from_decimal(item) for item in res.get("Items", [])]
+# Thumbnail rendering lives in its own service (pariksha-doc-processing), not
+# here - PyMuPDF is a heavy native dependency that would otherwise bloat
+# every cold start of this API for a feature only the upload path needs.
+# That service watches the library bucket via an S3 event and writes
+# `thumbnailUrl` onto the item asynchronously once it's rendered.
+
+
+def _encode_cursor(key: dict) -> str:
+    return base64.urlsafe_b64encode(json.dumps(key).encode()).decode()
+
+
+def _decode_cursor(cursor: str) -> dict:
+    try:
+        return json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid pagination cursor.")
+
+
+LIBRARY_LIST_PAGE_SIZE = 30
+
+
+@app.get("/library", response_model=LibraryListResponse)
+def list_library(cursor: str | None = None, email: str = Depends(get_current_email)):
+    # A full item can embed a 30-50 question paper (each with its own text/
+    # options) - sending every item's full paper inline in one response, for
+    # a vault that's grown to 200+ items, blew past a few MB and made the
+    # page time out. The list view only ever needs to know WHETHER a paper
+    # exists and how big it is, not its contents, so this strips `paper`
+    # down to hasPaper/questionCount and paginates server-side on top of
+    # that, via DynamoDB's own LastEvaluatedKey (not the Python-side
+    # _query_all loop used elsewhere, which is for internal aggregation
+    # reads that must see everything - this endpoint deliberately returns
+    # one bounded page per call).
+    kwargs: dict = dict(
+        KeyConditionExpression=Key("userId").eq(email),
+        ScanIndexForward=False,
+        Limit=LIBRARY_LIST_PAGE_SIZE,
+    )
+    if cursor:
+        kwargs["ExclusiveStartKey"] = _decode_cursor(cursor)
+    res = library_table.query(**kwargs)
+
+    out = []
+    for item in res.get("Items", []):
+        paper = item.get("paper")
+        light = _from_decimal({k: v for k, v in item.items() if k not in ("userId", "paper")})
+        light["hasPaper"] = bool(paper)
+        light["questionCount"] = len(paper.get("questions", [])) if paper else None
+        out.append(light)
+
+    next_cursor = _encode_cursor(res["LastEvaluatedKey"]) if "LastEvaluatedKey" in res else None
+    return {"items": out, "nextCursor": next_cursor}
+
+
+@app.get("/library/{item_id}", response_model=LibraryItem)
+def get_library_item(item_id: str, email: str = Depends(get_current_email)):
+    item = library_table.get_item(Key={"userId": email, "itemId": item_id}).get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found.")
+    paper = item.get("paper")
+    out = _from_decimal({k: v for k, v in item.items() if k != "userId"})
+    out["hasPaper"] = bool(paper)
+    out["questionCount"] = len(paper.get("questions", [])) if paper else None
+    return out
 
 
 @app.post("/library", response_model=LibraryItem)
@@ -205,6 +282,9 @@ def upload_library_files(body: LibraryUpload, email: str = Depends(get_current_e
         "files": files_meta,
         "createdAt": int(time.time() * 1000),
     }
+    # thumbnailUrl is set a few seconds later by the pariksha-doc-processing
+    # service, triggered by this PDF landing in the library bucket - not
+    # here, so the upload response doesn't wait on a PDF render.
     library_table.put_item(Item=item)
     return {k: v for k, v in item.items() if k != "userId"}
 
@@ -235,7 +315,10 @@ def save_library_paper(item_id: str, body: LibrarySavePaper, email: str = Depend
         ExpressionAttributeValues={":p": _to_decimal(body.paper)},
     )
     updated = {**item, "paper": body.paper}
-    return _from_decimal({k: v for k, v in updated.items() if k != "userId"})
+    out = _from_decimal({k: v for k, v in updated.items() if k != "userId"})
+    out["hasPaper"] = True
+    out["questionCount"] = len(body.paper.get("questions", []))
+    return out
 
 
 @app.delete("/library/{item_id}")
@@ -296,9 +379,9 @@ def ingest_bank_questions(body: BankIngestRequest, email: str = Depends(require_
 
 @app.get("/bank/sections", response_model=List[BankSectionSummary])
 def bank_sections(email: str = Depends(require_premium)):
-    res = bank_table.query(KeyConditionExpression=Key("userId").eq(email))
+    items = _query_all(bank_table, KeyConditionExpression=Key("userId").eq(email))
     groups: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"easy": 0, "medium": 0, "hard": 0})
-    for item in res.get("Items", []):
+    for item in items:
         key = (item.get("section", ""), item.get("chapter", ""))
         diff = item.get("difficulty", "medium")
         if diff not in groups[key]:
@@ -322,12 +405,12 @@ def bank_questions(
     chapter_list = [c.strip() for c in chapters.split(",") if c.strip()]
     out = []
     for chapter in chapter_list:
-        res = bank_table.query(
+        out.extend(_query_all(
+            bank_table,
             IndexName="BankBySectionChapterIndex",
             KeyConditionExpression=Key("userId").eq(email)
             & Key("sectionChapter").eq(_section_chapter(section, chapter)),
-        )
-        out.extend(res.get("Items", []))
+        ))
     if difficulty:
         out = [q for q in out if q.get("difficulty") == difficulty]
     return [_from_decimal(q) for q in out]
@@ -337,12 +420,12 @@ def bank_questions(
 def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(require_premium)):
     pool = []
     for chapter in body.chapters:
-        res = bank_table.query(
+        pool.extend(_query_all(
+            bank_table,
             IndexName="BankBySectionChapterIndex",
             KeyConditionExpression=Key("userId").eq(email)
             & Key("sectionChapter").eq(_section_chapter(body.section, chapter)),
-        )
-        pool.extend(res.get("Items", []))
+        ))
     if body.difficulty:
         pool = [q for q in pool if q.get("difficulty") == body.difficulty]
     if not pool:

@@ -3,7 +3,7 @@ import * as api from "../../shared/api";
 import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
-export type HubPhase = "home" | "past" | "library" | "insights";
+export type HubPhase = "home" | "progress" | "library" | "vault";
 
 interface Props {
   active: HubPhase;
@@ -29,31 +29,31 @@ export function PastIcon() {
 export function VaultIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
-export function InsightsIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-7M4 19h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+export function MasterVaultIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /><rect x="13" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg>;
 }
 export function LogoutIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M13 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-export function hubItems(): { phase: HubPhase; label: string; icon: ReactElement }[] {
+export function hubItems(session?: api.Session | null): { phase: HubPhase; label: string; icon: ReactElement }[] {
   return [
     { phase: "home", label: "Home", icon: <HomeIcon /> },
-    { phase: "past", label: "Past attempts", icon: <PastIcon /> },
+    { phase: "progress", label: "Progress", icon: <PastIcon /> },
     ...(api.backendEnabled() ? [{ phase: "library" as const, label: "Paper vault", icon: <VaultIcon /> }] : []),
-    ...(api.backendEnabled() ? [{ phase: "insights" as const, label: "Weak areas", icon: <InsightsIcon /> }] : []),
+    ...(api.backendEnabled() && api.canUseBankFeature(session ?? null)
+      ? [{ phase: "vault" as const, label: "Master Vault", icon: <MasterVaultIcon /> }]
+      : []),
   ];
 }
 
 export default function Sidebar({ active, onNavigate, session, onLogout }: Props) {
-  const items = hubItems();
+  const items = hubItems(session);
   const [streak, setStreak] = useState<number | null>(null);
-  const [vaultCount, setVaultCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!api.backendEnabled() || !session) return;
     api.fetchAttempts().then((a) => setStreak(computeStreak(a.map((r) => r.when)))).catch(() => {});
-    api.fetchLibrary().then((items) => setVaultCount(items.length)).catch(() => {});
   }, [session]);
 
   return (
@@ -88,9 +88,6 @@ export default function Sidebar({ active, onNavigate, session, onLogout }: Props
             >
               <span className="sidebarIconChip">{it.icon}</span>
               <span className="sidebarItemLabel">{it.label}</span>
-              {it.phase === "library" && !!vaultCount && (
-                <span className="sidebarItemBadge">{vaultCount}</span>
-              )}
             </button>
           ))}
         </nav>
@@ -99,7 +96,7 @@ export default function Sidebar({ active, onNavigate, session, onLogout }: Props
           <div className="sidebarPromoIcon">&#10024;</div>
           <b>Try AI review</b>
           <p>Get a personalized breakdown of your weak areas after your next mock.</p>
-          <button onClick={() => onNavigate("past")}>Learn more</button>
+          <button onClick={() => onNavigate("progress")}>Learn more</button>
         </div>
 
         {api.backendEnabled() && session && (
