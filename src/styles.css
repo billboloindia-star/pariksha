@@ -1231,6 +1231,8 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 /* ---------- progress control panel (mistakes & activity redesign) ---------- */
 .pgWide.home{max-width:1480px}
 
+.texWide.home{max-width:1320px}
+
 .pgSectionLabel{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--grey);text-transform:uppercase;margin:36px 0 14px}
 .pgSectionLabel::after{content:"";flex:1;height:1px;background:var(--line)}
 
@@ -1850,10 +1852,11 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texContractSecTitle{display:flex;align-items:center;gap:7px;margin-top:13px;font-weight:700;font-size:13px;color:#fff}
 .texContractSecDot{width:8px;height:8px;border-radius:50%}
 
-.texContractReadouts{display:flex;flex-direction:column;gap:2px;min-width:0}
+.texContractReadouts{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 18px;align-content:start;min-width:0}
+@media (max-width:900px){.texContractReadouts{grid-template-columns:1fr}}
 .texContractReadout{
   display:grid;grid-template-columns:4px 1fr;gap:12px;align-items:stretch;padding:9px 10px;
-  border-radius:9px;transition:background .15s;
+  border-radius:9px;transition:background .15s;min-width:0;
 }
 .texContractReadout:hover{background:#0e1c30}
 .texContractReadoutBar{width:4px;border-radius:3px;min-height:34px}
@@ -1869,15 +1872,31 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   padding:4px 9px;border-radius:999px;
 }
 
-.texPhaseTimeline{position:relative;margin-top:14px;padding-left:22px;border-left:2px solid var(--line)}
-.texPhaseItem{position:relative;padding-bottom:18px}
-.texPhaseItem:last-child{padding-bottom:0}
-.texPhaseDot{position:absolute;left:-28px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--grey);border:2px solid var(--panel)}
-.texPhaseItem.current .texPhaseDot{background:var(--blue)}
+.texPhaseRail{display:flex;flex-direction:column;gap:4px;margin-top:16px;position:relative}
+.texPhaseStage{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:16px 4px;position:relative}
+.texPhaseStage:not(:last-child)::after{
+  content:'';position:absolute;left:23px;top:54px;bottom:-4px;width:2px;background:var(--line);
+}
+.texPhaseStageNum{
+  font-family:var(--mono);font-size:15px;font-weight:700;color:var(--dim);background:var(--soft);
+  width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;z-index:1;
+}
+.texPhaseStage.now .texPhaseStageNum{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(26,115,199,.18)}
+.texPhaseStageTop{display:flex;align-items:center;gap:10px;margin-bottom:3px;flex-wrap:wrap}
 .texPhaseWhen{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
-.texPhaseName{font-weight:700;font-size:14px;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
-.texPhaseTag{font-size:10.5px;font-weight:700;background:var(--blue);color:#fff;padding:2px 7px;border-radius:5px}
-.texPhaseDesc{font-size:12.5px;color:var(--dim);line-height:1.5}
+.texPhaseName{font-weight:700;font-size:15px;margin:0 0 6px}
+.texPhaseDesc{font-size:12.5px;color:var(--dim);line-height:1.55;margin:0 0 10px}
+
+/* dark console context override */
+.texContractShell .texPhaseStage:not(:last-child)::after{background:#1c2d45}
+.texContractShell .texPhaseStageNum{background:#0e1c30;color:#8296b3}
+.texContractShell .texPhaseStage.now .texPhaseStageNum{background:linear-gradient(135deg,#3fa5ff,#2170c9);color:#fff;box-shadow:0 0 0 4px rgba(63,165,255,.18)}
+.texContractShell .texPhaseWhen{color:#5c7191}
+.texContractShell .texPhaseName{color:#fff}
+.texContractShell .texPhaseDesc{color:#8296b3}
+.texContractTag{font-size:10.5px;font-weight:800;background:var(--blue);color:#fff;padding:3px 9px;border-radius:999px}
+.texContractShell .texContractTag{background:linear-gradient(135deg,#3fa5ff,#2170c9)}
 
 /* ---- ongoing dashboard ---- */
 

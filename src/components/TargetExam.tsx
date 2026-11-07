@@ -317,7 +317,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
 
   // ======================= SETUP WIZARD =======================
   return (
-    <div className="home">
+    <div className={step === 5 ? "home texWide" : "home"}>
       <div className="texStepRow">
         {[1, 2, 3, 4].map((n) => {
           const displayStep = step >= 4 ? 4 : step;
@@ -738,15 +738,33 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             )}
           </div>
 
-          <div className="texCard">
-            <h2 className="texCardH2">Your {Math.round(generatedPlan.phases.reduce((s, p) => s + p.weeks, 0))}-week path</h2>
-            <div className="texPhaseTimeline">
+          <div className={generatedPlan.topicContract?.length ? "texContractShell" : "texCard"}>
+            {generatedPlan.topicContract?.length && (
+              <>
+                <div className="texContractGlow g1" />
+                <div className="texContractGlow g2" />
+              </>
+            )}
+            <h2 className={generatedPlan.topicContract?.length ? "texContractH2" : "texCardH2"}>
+              Your {Math.round(generatedPlan.phases.reduce((s, p) => s + p.weeks, 0))}-week path
+            </h2>
+            <div className="texPhaseRail">
               {generatedPlan.phases.map((p, i) => (
-                <div key={i} className={`texPhaseItem ${i === 0 ? "current" : ""}`}>
-                  <span className="texPhaseDot" />
-                  <div className="texPhaseWhen">Week {Math.round(p.startDay / 7) + 1}–{Math.round(p.endDay / 7)}{i === 0 ? " · now" : ""}</div>
-                  <div className="texPhaseName">{p.label}{i === 0 && <span className="texPhaseTag">You are here</span>}</div>
-                  <div className="texPhaseDesc">{p.description}</div>
+                <div key={i} className={`texPhaseStage ${i === 0 ? "now" : ""}`}>
+                  <span className="texPhaseStageNum">{String(i + 1).padStart(2, "0")}</span>
+                  <div className="texPhaseStageBody">
+                    <div className="texPhaseStageTop">
+                      <span className="texPhaseWhen">Week {Math.round(p.startDay / 7) + 1}–{Math.round(p.endDay / 7)}{i === 0 ? " · now" : ""}</span>
+                      {i === 0 && <span className="texContractTag">You are here</span>}
+                    </div>
+                    <div className="texPhaseName">{p.label}</div>
+                    <p className="texPhaseDesc">{p.description}</p>
+                    {p.focusTopics.length > 0 && (
+                      <div className="texContractChipRow">
+                        {p.focusTopics.map((t) => <span key={t} className="texContractChip">{t}</span>)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
