@@ -950,7 +950,7 @@ function TargetExamDashboard({
                       <div className="texTaskName">{t.topic}</div>
                       <div className="texTaskMeta">{t.meta}</div>
                     </div>
-                    {!done && <button className="texTaskGo" onClick={() => onStartTopic(t.topic)}>Start →</button>}
+                    <button className="texTaskGo" onClick={() => onStartTopic(t.topic)}>{done ? "Practice again →" : "Start →"}</button>
                   </div>
                 );
               })}

@@ -729,20 +729,35 @@ def _weak_topics_for_plan(attempts: list, chapter_to_section: dict) -> List[Weak
     return out[:20]
 
 
+MEANINGFUL_COMPLETION_FRACTION = 0.65  # must clear ~65-70% of that paper's own questions
+
+
 def _attempted_count(a: dict) -> int:
     return max(0, int(a.get("total", 0)) - int(a.get("skipped", 0)))
+
+
+def _is_meaningful_attempt(a: dict) -> bool:
+    """A flat question-count floor doesn't scale - 5 questions is nothing
+    out of an 80-question mock but almost everything out of a 6-question
+    diagnostic. Instead require the user to have actually completed most of
+    THAT paper (>= 65% of its own question count) before it counts as a
+    real accuracy signal, so bailing out early on a mock can't read as
+    "well ahead"."""
+    total = int(a.get("total", 0))
+    if total <= 0:
+        return False
+    return _attempted_count(a) / total >= MEANINGFUL_COMPLETION_FRACTION
 
 
 def _recent_avg_accuracy(attempts: list, days: int) -> float:
     """Volume-weighted, not a plain mean of per-attempt percentages - a
     1-question dash answered correctly would otherwise read as "100%
-    accuracy" and count exactly as much as a fully completed paper. Attempts
-    where fewer than 5 questions were actually answered (abandoned early)
-    are excluded entirely rather than diluted in, since a handful of
-    answers isn't a reliable accuracy signal on its own."""
+    accuracy" and count exactly as much as a fully completed paper.
+    Attempts that weren't substantially completed are excluded entirely
+    rather than diluted in - see _is_meaningful_attempt."""
     cutoff = int(time.time() * 1000) - days * 86400000
     recent = [a for a in attempts if int(a.get("when", 0)) >= cutoff]
-    meaningful = [a for a in recent if _attempted_count(a) >= 5]
+    meaningful = [a for a in recent if _is_meaningful_attempt(a)]
     if not meaningful:
         return 0.0
     total_attempted = sum(_attempted_count(a) for a in meaningful)
@@ -808,11 +823,15 @@ def _current_phase_index(plan: dict, accepted_at_ms: int) -> int:
     return max(0, len(phases) - 1)
 
 
+MEANINGFUL_TOPIC_PRACTICE_COUNT = 5  # questions on a topic before it's marked done for today
+
+
 def _today_tasks(phase: dict, attempts_today: list) -> List[TargetExamTask]:
     done_topics = set()
     for a in attempts_today:
-        for topic in (a.get("byTopic") or {}).keys():
-            done_topics.add(_normalize_topic(topic))
+        for topic, tally in (a.get("byTopic") or {}).items():
+            if int((tally or {}).get("att", 0)) >= MEANINGFUL_TOPIC_PRACTICE_COUNT:
+                done_topics.add(_normalize_topic(topic))
     tasks = []
     for topic in (phase.get("focusTopics") or [])[:4]:
         done = _normalize_topic(topic) in done_topics
@@ -900,7 +919,7 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
     exam_date_ms = int(datetime(exam_date.year, exam_date.month, exam_date.day, tzinfo=timezone.utc).timestamp() * 1000)
 
     current_avg = _recent_avg_accuracy(attempts, days=7)
-    has_meaningful_attempt = any(_attempted_count(a) >= 5 for a in attempts)
+    has_meaningful_attempt = any(_is_meaningful_attempt(a) for a in attempts)
     if not has_meaningful_attempt:
         readiness, status = 0, "behind"
     else:
