@@ -31,6 +31,11 @@ class SectionConfidenceInput(BaseModel):
     # of (or to confirm) their self-rating - a measured number, more trustworthy
     # than a guess, so it should carry more weight in the plan than `level` alone.
     diagnosticAccuracy: Optional[float] = None
+    # Per-chapter accuracy from that same diagnostic quiz - a section-level
+    # rating/score can't tell the planner WHICH chapters inside the section
+    # need the work, so this is the real signal for picking focusTopics
+    # within a section when it's present.
+    chapterAccuracy: Optional[Dict[str, float]] = None
 
 
 class ExamPlanInput(BaseModel):
@@ -102,15 +107,27 @@ def _build_prompt(data: ExamPlanInput) -> str:
     section_names = list(data.chaptersBySection.keys())
 
     if data.sectionConfidence:
-        conf_lines = "\n".join(
-            f"- {c.section}: self-rated \"{LEVEL_LABEL.get(c.level, c.level)}\""
-            + (f", confirmed by a {round(c.diagnosticAccuracy)}% score on a diagnostic quiz" if c.diagnosticAccuracy is not None else " (no diagnostic taken - treat as a rough guess)")
-            for c in data.sectionConfidence
-        )
+        conf_blocks = []
+        for c in data.sectionConfidence:
+            line = f"- {c.section}: self-rated \"{LEVEL_LABEL.get(c.level, c.level)}\""
+            line += (
+                f", confirmed by a {round(c.diagnosticAccuracy)}% score on a diagnostic quiz"
+                if c.diagnosticAccuracy is not None else " (no diagnostic taken - treat as a rough guess)"
+            )
+            if c.chapterAccuracy:
+                chapter_lines = "\n".join(
+                    f"    - {chapter}: {round(acc)}%" for chapter, acc in c.chapterAccuracy.items()
+                )
+                line += f"\n  Per-chapter diagnostic results within {c.section} (use THIS to pick which chapters of {c.section} need focusTopics, not just the section-level rating above):\n{chapter_lines}"
+            conf_blocks.append(line)
+        conf_lines = "\n".join(conf_blocks)
         starting_point_block = f"""
 The student's self-reported starting point, section by section (use this heavily if attempt
 history above is thin or empty - a diagnostic-confirmed rating is far more reliable than a bare
-self-rating, so trust those numbers over a self-rating alone):
+self-rating, so trust those numbers over a self-rating alone). A section-level rating alone can't
+tell you which chapters WITHIN that section to focus on, so where a per-chapter breakdown is given
+below, that is your real signal for choosing that section's focusTopics - don't just pick arbitrary
+chapters from the section's valid-chapter list because the section itself was rated low:
 {conf_lines}
 """
     else:

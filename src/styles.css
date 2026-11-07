@@ -1766,6 +1766,13 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texDiagScorePct{font-size:13px;color:var(--dim);font-weight:700;margin-bottom:12px}
 .texDiagResult p{font-size:13.5px;color:var(--dim);max-width:400px;margin:0 auto}
 
+.texDiagChapterBreakdown{border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+.texDiagChapterRow{display:flex;align-items:center;gap:10px;padding:6px 0}
+.texDiagChapterName{width:160px;flex-shrink:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.texDiagChapterTrack{flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden}
+.texDiagChapterFill{display:block;height:6px;border-radius:3px}
+.texDiagChapterPct{width:38px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700}
+
 .texFoot{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
 .texFoot .btn.lg{padding:12px 22px}
 

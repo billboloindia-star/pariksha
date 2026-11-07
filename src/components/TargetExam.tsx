@@ -97,6 +97,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   // ---- starting-point self-assessment (step 3) ----
   const [sectionLevels, setSectionLevels] = useState<Record<string, ConfidenceLevel>>({});
   const [diagnosticAccuracy, setDiagnosticAccuracy] = useState<Record<string, number>>({});
+  const [diagnosticChapterAccuracy, setDiagnosticChapterAccuracy] = useState<Record<string, Record<string, number>>>({});
   const [diagnosticSection, setDiagnosticSection] = useState<string | null>(null);
   const [diagnosticPaper, setDiagnosticPaper] = useState<Paper | null>(null);
   const [diagnosticLoading, setDiagnosticLoading] = useState(false);
@@ -182,9 +183,11 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     setDiagnosticLoading(true);
     setDiagnosticSection(section);
     try {
-      const paper = await api.generatePracticePaper({
-        section, chapters: chaptersBySection[section] ?? [], count: 10, durationMinutes: 10,
-      });
+      const chapters = chaptersBySection[section] ?? [];
+      // aim for ~2 questions per chapter (capped) so the per-chapter accuracy
+      // breakdown below is actually meaningful, not just 0-or-1 samples.
+      const count = Math.max(10, Math.min(20, chapters.length * 2));
+      const paper = await api.generatePracticePaper({ section, chapters, count, durationMinutes: 10 });
       setDiagnosticPaper(paper);
     } catch (err) {
       setDiagnosticError(err instanceof Error ? err.message : "Couldn't load the quiz — try again.");
@@ -203,13 +206,23 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   function submitDiagnostic() {
     if (!diagnosticPaper || !diagnosticSection) return;
     let correct = 0;
+    const byChapter: Record<string, { ok: number; att: number }> = {};
     for (const q of diagnosticPaper.questions) {
-      if (diagnosticAnswers[q.id] === q.ans) correct++;
+      const ok = diagnosticAnswers[q.id] === q.ans;
+      if (ok) correct++;
+      const bucket = (byChapter[q.topic] ??= { ok: 0, att: 0 });
+      bucket.att++;
+      if (ok) bucket.ok++;
     }
     const total = diagnosticPaper.questions.length;
     const accuracy = total ? Math.round((correct / total) * 100) : 0;
+    const chapterAccuracy: Record<string, number> = {};
+    for (const [chapter, { ok, att }] of Object.entries(byChapter)) {
+      chapterAccuracy[chapter] = Math.round((ok / att) * 100);
+    }
     setSectionLevels((prev) => ({ ...prev, [diagnosticSection]: levelFromAccuracy(accuracy) }));
     setDiagnosticAccuracy((prev) => ({ ...prev, [diagnosticSection]: accuracy }));
+    setDiagnosticChapterAccuracy((prev) => ({ ...prev, [diagnosticSection]: chapterAccuracy }));
     setDiagnosticScore({ correct, total });
   }
 
@@ -218,6 +231,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
       section: s,
       level: sectionLevels[s] ?? "average",
       diagnosticAccuracy: diagnosticAccuracy[s],
+      chapterAccuracy: diagnosticChapterAccuracy[s],
     }));
   }
 
@@ -459,6 +473,21 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                   <div className="texDiagScorePct">{Math.round((diagnosticScore.correct / Math.max(1, diagnosticScore.total)) * 100)}% accuracy</div>
                   <p>We've set <b>{diagnosticSection}</b> to "{LEVEL_META[levelFromAccuracy(Math.round((diagnosticScore.correct / Math.max(1, diagnosticScore.total)) * 100))].label}" based on this — you can still override it manually.</p>
                 </div>
+                {diagnosticChapterAccuracy[diagnosticSection] && (
+                  <div className="texDiagChapterBreakdown">
+                    <div className="texFieldLabel" style={{ marginBottom: 2 }}>Chapter-by-chapter, from this quiz</div>
+                    <p className="texFieldHint">This is what actually drives which {diagnosticSection} chapters your plan focuses on — not just the overall score above.</p>
+                    {Object.entries(diagnosticChapterAccuracy[diagnosticSection])
+                      .sort((a, b) => a[1] - b[1])
+                      .map(([chapter, acc]) => (
+                        <div key={chapter} className="texDiagChapterRow">
+                          <span className="texDiagChapterName">{chapter}</span>
+                          <span className="texDiagChapterTrack"><span className="texDiagChapterFill" style={{ width: `${acc}%`, background: LEVEL_META[levelFromAccuracy(acc)].color }} /></span>
+                          <span className="texDiagChapterPct" style={{ color: LEVEL_META[levelFromAccuracy(acc)].color }}>{acc}%</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
                 <div className="texFoot">
                   <button className="btn primary" onClick={closeDiagnostic}>Done</button>
                 </div>

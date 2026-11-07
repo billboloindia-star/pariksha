@@ -210,6 +210,7 @@ class SectionConfidence(BaseModel):
     section: str
     level: str  # "very_low" | "average" | "excellent"
     diagnosticAccuracy: Optional[float] = None
+    chapterAccuracy: Optional[Dict[str, float]] = None
 
 
 class TargetExamGenerateRequest(BaseModel):
