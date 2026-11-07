@@ -641,12 +641,15 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                         <div className="texFocusGroupHead">
                           <span className="texFocusGroupDot" style={{ background: accent }} />
                           <span className="texFocusGroupName">{sec.section}</span>
+                          <span className="texContractSectionNote">
+                            — a real {sec.section} paper has {sec.buckets[0]?.sectionTotal ?? "?"} questions; the numbers below are how many typically come from each topic
+                          </span>
                         </div>
                         {sec.buckets.map((b) => (
                           <div key={b.label} className="texContractBucket">
                             <div className="texContractBucketHead">
                               <span className="texContractBucketLabel" title={b.weightNote}>{bucketLabel(b.label)}</span>
-                              <span className="texContractBucketBadge" title={b.weightNote}>~{Math.round(b.weightCount)}/{b.sectionTotal}</span>
+                              <span className="texContractBucketBadge" title={b.weightNote}>~{Math.round(b.weightCount)} of {b.sectionTotal} Qs</span>
                             </div>
                             <div className="texContractBar">
                               <span className="texContractBarFill" style={{ width: `${(b.weightCount / maxWeight) * 100}%`, background: accent }} />
