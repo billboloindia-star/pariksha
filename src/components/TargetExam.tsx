@@ -150,6 +150,20 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     return m;
   }, [bankSections]);
 
+  const focusTopicsBySection = useMemo(() => {
+    if (!generatedPlan) return [];
+    const map: Record<string, Set<string>> = {};
+    for (const p of generatedPlan.phases) {
+      for (const t of p.focusTopics) {
+        const section = chapterToSection[t] ?? "Other";
+        (map[section] ??= new Set()).add(t);
+      }
+    }
+    return Object.entries(map)
+      .map(([section, topics]) => ({ section, topics: Array.from(topics) }))
+      .sort((a, b) => b.topics.length - a.topics.length);
+  }, [generatedPlan, chapterToSection]);
+
   function startTopic(topic: string) {
     const section = chapterToSection[topic];
     if (section) onPracticeTopic(section, topic);
@@ -527,17 +541,26 @@ export default function TargetExam({ onPracticeTopic }: Props) {
           </div>
 
           <div className="texCard">
-            <h2 className="texCardH2">Where your time goes</h2>
-            <p className="texCardSub">Weighted toward your weakest topics — not an even split across the syllabus.</p>
-            <div className="texFocusBars">
-              {Object.entries(generatedPlan.focusDistribution).map(([name, pct], i) => (
-                <div key={name} className="texFocusBarRow">
-                  <span className="texFocusBarName">{name}</span>
-                  <span className="texFocusBarTrack"><span className="texFocusBarFill" style={{ width: `${pct}%`, background: FOCUS_COLORS[name] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} /></span>
-                  <span className="texFocusBarPct">{Math.round(pct)}%</span>
-                </div>
-              ))}
-            </div>
+            <h2 className="texCardH2">What you'll actually practice</h2>
+            <p className="texCardSub">Every real topic this plan covers, grouped by section — not an abstract percentage split.</p>
+            {focusTopicsBySection.length === 0 ? (
+              <p className="texFieldHint">This plan is revision + mocks only — no new topics to list.</p>
+            ) : (
+              <div className="texFocusGroups">
+                {focusTopicsBySection.map(({ section, topics }, i) => (
+                  <div key={section} className="texFocusGroup">
+                    <div className="texFocusGroupHead">
+                      <span className="texFocusGroupDot" style={{ background: FOCUS_COLORS[section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length] }} />
+                      <span className="texFocusGroupName">{section}</span>
+                      <span className="texFocusGroupCount">{topics.length} topic{topics.length === 1 ? "" : "s"}</span>
+                    </div>
+                    <div className="texFocusChips">
+                      {topics.map((t) => <span key={t} className="texFocusChip">{t}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="texCard">
