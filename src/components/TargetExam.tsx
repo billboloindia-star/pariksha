@@ -385,10 +385,13 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                 const accuracy = diagnosticAccuracy[s];
                 return (
                   <div key={s} className="texConfRow">
-                    <div className="texConfHead">
+                    <div className="texConfTop">
                       <span className="texConfName">{s}</span>
                       {accuracy !== undefined && (
-                        <span className="texConfDiag">Diagnostic: {accuracy}% · <button className="texConfRetake" onClick={() => startDiagnostic(s)}>Retake</button></span>
+                        <span className="texConfDiagBadge">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22l9-12.5H12.5L13 2z" /></svg>
+                          Diagnostic-calibrated · {accuracy}%
+                        </span>
                       )}
                     </div>
                     <div className="texConfBody">
@@ -404,9 +407,10 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                           </button>
                         ))}
                       </div>
-                      {accuracy === undefined && (
-                        <button className="texDiagLink" onClick={() => startDiagnostic(s)}>Take a quick diagnostic instead →</button>
-                      )}
+                      <button className="texDiagBtn" onClick={() => startDiagnostic(s)}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22l9-12.5H12.5L13 2z" /></svg>
+                        {accuracy !== undefined ? "Retake diagnostic" : "Quick diagnostic"}
+                      </button>
                     </div>
                   </div>
                 );

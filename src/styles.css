@@ -1729,19 +1729,27 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texMarksInput:focus{outline:none;border-color:var(--blue);background:#fff}
 
 /* ---- starting-point self-assessment (step 3) ---- */
-.texConfRow{padding:16px 0;border-bottom:1px solid var(--line)}
+.texConfRow{padding:18px 0;border-bottom:1px solid var(--line)}
 .texConfRow:last-child{border-bottom:none;padding-bottom:0}
 .texConfRow:first-child{padding-top:0}
-.texConfHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.texConfTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
 .texConfName{font-weight:700;font-size:14.5px}
-.texConfDiag{font-size:12px;color:var(--dim);font-weight:600}
-.texConfRetake{color:var(--blue);font-weight:700}
+.texConfDiagBadge{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#2f8f4e;
+  background:rgba(47,143,78,.1);padding:4px 10px;border-radius:999px;
+}
 .texConfBody{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .texLevelRow{display:flex;gap:8px}
-.texLevelBtn{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line-2);background:#fff;font-size:12.5px;font-weight:700;color:var(--dim)}
+.texLevelBtn{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line-2);background:#fff;font-size:12.5px;font-weight:700;color:var(--dim);transition:border-color .12s,background .12s,color .12s}
 .texLevelBtn:hover{border-color:var(--line-2);color:var(--ink)}
-.texDiagLink{font-size:12.5px;font-weight:700;color:var(--blue)}
-.texDiagLink:hover{text-decoration:underline}
+.texDiagBtn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:999px;border:none;
+  background:linear-gradient(135deg,#6f42c1,#1a73c7);color:#fff;font-size:12.5px;font-weight:700;
+  box-shadow:0 2px 8px rgba(111,66,193,.25);transition:transform .12s,box-shadow .12s;
+}
+.texDiagBtn svg{opacity:.9}
+.texDiagBtn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(111,66,193,.35)}
+.texDiagBtn:active{transform:translateY(0)}
 
 .modal.wide{max-width:640px;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
 .texDiagTitle{font-size:17px;font-weight:700;margin-bottom:10px}
