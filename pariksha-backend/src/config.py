@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     attempts_table: str = "pariksha-attempts-dev"
     library_table: str = "pariksha-library-dev"
     library_bucket: str = ""
+    bank_table: str = "pariksha-bank-dev"
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 

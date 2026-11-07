@@ -13,6 +13,12 @@ class Credentials(BaseModel):
 class AuthResponse(BaseModel):
     token: str
     email: str
+    plan: str = "free"
+
+
+class MeResponse(BaseModel):
+    email: str
+    plan: str = "free"
 
 
 class TopicTally(BaseModel):
@@ -88,3 +94,61 @@ class LibraryItem(BaseModel):
 class LibraryFileLink(BaseModel):
     fileName: str
     url: str
+
+
+class BankTableSpec(BaseModel):
+    head: List[str]
+    rows: List[List[object]]
+
+
+class BankQuestionIn(BaseModel):
+    # Mirrors shared/types.ts's RawQuestion field conventions (answer_index for
+    # "mc", answer for "num"), plus the bank-specific tagging fields that make
+    # a question filterable/browsable instead of fixed to one Paper.
+    section: str
+    chapter: str
+    difficulty: str = "medium"
+    type: str = "mc"
+    text: str
+    options: Optional[List[str]] = None
+    answer_index: Optional[int] = None
+    answer: Optional[float] = None
+    solution: Optional[str] = None
+    table: Optional[BankTableSpec] = None
+    image: Optional[str] = None
+
+
+class BankQuestion(BankQuestionIn):
+    questionId: str
+    createdAt: int
+
+
+class BankIngestRequest(BaseModel):
+    questions: List[BankQuestionIn]
+
+
+class BankIngestResult(BaseModel):
+    ingested: int
+    errors: List[str] = []
+
+
+class DifficultyCount(BaseModel):
+    easy: int = 0
+    medium: int = 0
+    hard: int = 0
+
+
+class BankSectionSummary(BaseModel):
+    section: str
+    chapter: str
+    count: int
+    byDifficulty: DifficultyCount
+
+
+class PracticePaperRequest(BaseModel):
+    section: str
+    chapters: List[str]
+    difficulty: Optional[str] = None
+    count: int = 20
+    durationMinutes: int = 20
+    negativeMarking: float = 0.25

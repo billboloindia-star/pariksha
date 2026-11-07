@@ -1,8 +1,10 @@
 """Pariksha backend: email/password accounts + attempt history, on AWS Lambda."""
 
 import base64
+import random
 import time
 import uuid
+from collections import defaultdict
 from decimal import Decimal
 from typing import List
 
@@ -15,15 +17,22 @@ from mangum import Mangum
 from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
 from src.config import settings
-from src.db import attempts_table, library_table, s3, users_table
+from src.db import attempts_table, bank_table, library_table, s3, users_table
 from src.models import (
     AttemptRecord,
     AuthResponse,
+    BankIngestRequest,
+    BankIngestResult,
+    BankQuestion,
+    BankQuestionIn,
+    BankSectionSummary,
     Credentials,
     LibraryFileLink,
     LibraryItem,
     LibrarySavePaper,
     LibraryUpload,
+    MeResponse,
+    PracticePaperRequest,
     QuestionNoteUpdate,
 )
 
@@ -79,8 +88,8 @@ def signup(body: Credentials):
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
 
-    users_table.put_item(Item={"email": email, "passwordHash": hash_password(body.password)})
-    return AuthResponse(token=create_jwt(email), email=email)
+    users_table.put_item(Item={"email": email, "passwordHash": hash_password(body.password), "plan": "free"})
+    return AuthResponse(token=create_jwt(email), email=email, plan="free")
 
 
 @app.post("/auth/login", response_model=AuthResponse)
@@ -90,7 +99,20 @@ def login(body: Credentials):
     if not item or not verify_password(body.password, item["passwordHash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
-    return AuthResponse(token=create_jwt(email), email=email)
+    return AuthResponse(token=create_jwt(email), email=email, plan=item.get("plan", "free"))
+
+
+@app.get("/me", response_model=MeResponse)
+def me(email: str = Depends(get_current_email)):
+    item = users_table.get_item(Key={"email": email}).get("Item")
+    return MeResponse(email=email, plan=(item or {}).get("plan", "free"))
+
+
+def require_premium(email: str = Depends(get_current_email)) -> str:
+    item = users_table.get_item(Key={"email": email}).get("Item")
+    if (item or {}).get("plan", "free") != "premium":
+        raise HTTPException(status_code=403, detail="This feature needs a premium plan.")
+    return email
 
 
 @app.get("/attempts", response_model=List[AttemptRecord])
@@ -225,6 +247,135 @@ def delete_library_item(item_id: str, email: str = Depends(get_current_email)):
             s3.delete_object(Bucket=settings.library_bucket, Key=key)
     library_table.delete_item(Key={"userId": email, "itemId": item_id})
     return {"ok": True}
+
+
+def _section_chapter(section: str, chapter: str) -> str:
+    return f"{section}#{chapter}"
+
+
+def _validate_bank_question(q: BankQuestionIn, index: int) -> str | None:
+    if not q.text.strip():
+        return f"Question {index + 1}: missing text."
+    if q.type == "mc":
+        if not q.options or len(q.options) < 2:
+            return f"Question {index + 1}: multiple-choice needs at least two options."
+        if q.answer_index is None or not (0 <= q.answer_index < len(q.options)):
+            return f"Question {index + 1}: answer_index is missing or out of range."
+    elif q.type == "num":
+        if q.answer is None:
+            return f"Question {index + 1}: numeric question needs an answer."
+    else:
+        return f"Question {index + 1}: type must be \"mc\" or \"num\"."
+    return None
+
+
+@app.post("/bank/ingest", response_model=BankIngestResult)
+def ingest_bank_questions(body: BankIngestRequest, email: str = Depends(require_premium)):
+    errors: list[str] = []
+    rows = []
+    now = int(time.time() * 1000)
+    for i, q in enumerate(body.questions):
+        err = _validate_bank_question(q, i)
+        if err:
+            errors.append(err)
+            continue
+        item = _to_decimal(q.model_dump())
+        item["userId"] = email
+        item["questionId"] = uuid.uuid4().hex
+        item["createdAt"] = now
+        item["sectionChapter"] = _section_chapter(q.section, q.chapter)
+        rows.append(item)
+
+    if rows:
+        with bank_table.batch_writer() as batch:
+            for item in rows:
+                batch.put_item(Item=item)
+
+    return BankIngestResult(ingested=len(rows), errors=errors[:5])
+
+
+@app.get("/bank/sections", response_model=List[BankSectionSummary])
+def bank_sections(email: str = Depends(require_premium)):
+    res = bank_table.query(KeyConditionExpression=Key("userId").eq(email))
+    groups: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"easy": 0, "medium": 0, "hard": 0})
+    for item in res.get("Items", []):
+        key = (item.get("section", ""), item.get("chapter", ""))
+        diff = item.get("difficulty", "medium")
+        if diff not in groups[key]:
+            diff = "medium"
+        groups[key][diff] += 1
+    return [
+        BankSectionSummary(
+            section=section, chapter=chapter, count=sum(counts.values()), byDifficulty=counts
+        )
+        for (section, chapter), counts in sorted(groups.items())
+    ]
+
+
+@app.get("/bank/questions", response_model=List[BankQuestion])
+def bank_questions(
+    section: str,
+    chapters: str,
+    difficulty: str | None = None,
+    email: str = Depends(require_premium),
+):
+    chapter_list = [c.strip() for c in chapters.split(",") if c.strip()]
+    out = []
+    for chapter in chapter_list:
+        res = bank_table.query(
+            IndexName="BankBySectionChapterIndex",
+            KeyConditionExpression=Key("userId").eq(email)
+            & Key("sectionChapter").eq(_section_chapter(section, chapter)),
+        )
+        out.extend(res.get("Items", []))
+    if difficulty:
+        out = [q for q in out if q.get("difficulty") == difficulty]
+    return [_from_decimal(q) for q in out]
+
+
+@app.post("/bank/practice-paper")
+def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(require_premium)):
+    pool = []
+    for chapter in body.chapters:
+        res = bank_table.query(
+            IndexName="BankBySectionChapterIndex",
+            KeyConditionExpression=Key("userId").eq(email)
+            & Key("sectionChapter").eq(_section_chapter(body.section, chapter)),
+        )
+        pool.extend(res.get("Items", []))
+    if body.difficulty:
+        pool = [q for q in pool if q.get("difficulty") == body.difficulty]
+    if not pool:
+        raise HTTPException(status_code=404, detail="No questions match that chapter/difficulty selection.")
+
+    sample = random.sample(pool, min(body.count, len(pool)))
+    sample = [_from_decimal(q) for q in sample]
+
+    chapters_label = ", ".join(body.chapters)
+    questions = []
+    for q in sample:
+        questions.append({
+            "id": q["questionId"],
+            "section": body.section,
+            "topic": q["chapter"],
+            "type": q["type"],
+            "text": q["text"],
+            "table": q.get("table"),
+            "image": q.get("image"),
+            "solution": q.get("solution"),
+            "options": q.get("options"),
+            "ans": q["answer_index"] if q["type"] == "mc" else q["answer"],
+        })
+
+    paper = {
+        "title": f"{body.section} practice — {chapters_label}",
+        "exam": body.section,
+        "durationMinutes": body.durationMinutes,
+        "negativeMarking": body.negativeMarking,
+        "sections": [{"name": body.section, "from": 0, "to": len(questions) - 1}],
+        "questions": questions,
+    }
+    return paper
 
 
 handler = Mangum(app)

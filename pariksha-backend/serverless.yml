@@ -15,6 +15,7 @@ provider:
     ATTEMPTS_TABLE: pariksha-attempts-${self:provider.stage}
     LIBRARY_TABLE: pariksha-library-${self:provider.stage}
     LIBRARY_BUCKET: pariksha-library-${self:provider.stage}-${aws:accountId}
+    BANK_TABLE: pariksha-bank-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -26,6 +27,7 @@ provider:
             - dynamodb:GetItem
             - dynamodb:PutItem
             - dynamodb:Query
+            - dynamodb:UpdateItem
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}
         - Effect: Allow
           Action:
@@ -41,6 +43,16 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.LIBRARY_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:BatchWriteItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BANK_TABLE}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BANK_TABLE}/index/*
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -121,6 +133,33 @@ resources:
             KeyType: HASH
           - AttributeName: itemId
             KeyType: RANGE
+
+    BankTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.BANK_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: questionId
+            AttributeType: S
+          - AttributeName: sectionChapter
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: questionId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: BankBySectionChapterIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: sectionChapter
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
 
     LibraryBucket:
       Type: AWS::S3::Bucket
