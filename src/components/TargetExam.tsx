@@ -19,14 +19,14 @@ interface Props {
 
 const EXAMS: {
   name: TargetExamName; label: string; desc: string; gradient: string; ring: string;
-  prelimsQ: number; prelimsMin: number; timerType: "Sectional" | "Composite"; pyqVerified: boolean;
+  prelimsQ: number; prelimsMin: number; pyqVerified: boolean;
 }[] = [
-  { name: "IBPS PO", label: "IBPS PO", desc: "Probationary Officer · Public Sector Banks", gradient: "linear-gradient(135deg,#1a73c7,#0c2c4a)", ring: "#1a73c7", prelimsQ: 100, prelimsMin: 60, timerType: "Sectional", pyqVerified: false },
-  { name: "SBI PO", label: "SBI PO", desc: "Probationary Officer · State Bank of India", gradient: "linear-gradient(135deg,#6f42c1,#3a1f6e)", ring: "#6f42c1", prelimsQ: 100, prelimsMin: 60, timerType: "Sectional", pyqVerified: false },
-  { name: "IBPS Clerk", label: "IBPS Clerk", desc: "Clerk · Public Sector Banks", gradient: "linear-gradient(135deg,#2f8f4e,#154a28)", ring: "#2f8f4e", prelimsQ: 100, prelimsMin: 60, timerType: "Sectional", pyqVerified: false },
-  { name: "SBI Clerk", label: "SBI Clerk", desc: "Junior Associate · State Bank of India", gradient: "linear-gradient(135deg,#b4740e,#6b4409)", ring: "#b4740e", prelimsQ: 100, prelimsMin: 60, timerType: "Sectional", pyqVerified: false },
-  { name: "RRB PO", label: "RRB PO", desc: "Officer Scale I · Regional Rural Banks", gradient: "linear-gradient(135deg,#1a9b8f,#0a4d46)", ring: "#1a9b8f", prelimsQ: 80, prelimsMin: 45, timerType: "Composite", pyqVerified: true },
-  { name: "RRB Clerk", label: "RRB Clerk", desc: "Office Assistant · Regional Rural Banks", gradient: "linear-gradient(135deg,#c0392b,#6e1f16)", ring: "#c0392b", prelimsQ: 80, prelimsMin: 45, timerType: "Composite", pyqVerified: true },
+  { name: "IBPS PO", label: "IBPS PO", desc: "Probationary Officer · Public Sector Banks", gradient: "linear-gradient(135deg,#1a73c7,#0c2c4a)", ring: "#1a73c7", prelimsQ: 100, prelimsMin: 60, pyqVerified: false },
+  { name: "SBI PO", label: "SBI PO", desc: "Probationary Officer · State Bank of India", gradient: "linear-gradient(135deg,#6f42c1,#3a1f6e)", ring: "#6f42c1", prelimsQ: 100, prelimsMin: 60, pyqVerified: false },
+  { name: "IBPS Clerk", label: "IBPS Clerk", desc: "Clerk · Public Sector Banks", gradient: "linear-gradient(135deg,#2f8f4e,#154a28)", ring: "#2f8f4e", prelimsQ: 100, prelimsMin: 60, pyqVerified: false },
+  { name: "SBI Clerk", label: "SBI Clerk", desc: "Junior Associate · State Bank of India", gradient: "linear-gradient(135deg,#b4740e,#6b4409)", ring: "#b4740e", prelimsQ: 100, prelimsMin: 60, pyqVerified: false },
+  { name: "RRB PO", label: "RRB PO", desc: "Officer Scale I · Regional Rural Banks", gradient: "linear-gradient(135deg,#1a9b8f,#0a4d46)", ring: "#1a9b8f", prelimsQ: 80, prelimsMin: 45, pyqVerified: true },
+  { name: "RRB Clerk", label: "RRB Clerk", desc: "Office Assistant · Regional Rural Banks", gradient: "linear-gradient(135deg,#c0392b,#6e1f16)", ring: "#c0392b", prelimsQ: 80, prelimsMin: 45, pyqVerified: true },
 ];
 
 const GEN_STEPS = [
@@ -367,7 +367,6 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                 <div className="texExamStats">
                   <div className="st"><b>{e.prelimsQ}</b><span>Questions</span></div>
                   <div className="st"><b>{e.prelimsMin}m</b><span>Duration</span></div>
-                  <div className="st"><b>{e.timerType}</b><span>Timing</span></div>
                 </div>
               </button>
             ))}
