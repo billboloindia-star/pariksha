@@ -673,8 +673,8 @@ export default function TargetExam({ onPracticeTopic }: Props) {
                       <div className="texContractDonutWrap">
                         <div className="texContractDonut" style={{ background: `conic-gradient(${stops.join(",")})` }}>
                           <div className="texContractDonutHole">
-                            <b>{Math.round(totalWeight)}</b>
-                            <span>of {sec.buckets[0]?.sectionTotal ?? 40} Qs</span>
+                            <b>{sec.buckets[0]?.sectionTotal ?? 40}</b>
+                            <span>real Qs / paper</span>
                           </div>
                         </div>
                         <div className="texContractSecTitle">
