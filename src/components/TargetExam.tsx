@@ -383,59 +383,84 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             <h1>Set your target</h1>
             <p>Your exam date and target score shape how aggressive the plan needs to be.</p>
           </div>
-          <div className="texCard">
-            <div className="texField">
-              <div className="texFieldLabel">Exam stage</div>
-              <p className="texFieldHint">Prelims is objective-only and comes first; Mains adds further rounds.</p>
-              <div className="texToggleRow">
+          <div className="texTargetShell">
+            <div className="texContractGlow g1" />
+            <div className="texContractGlow g2" />
+
+            <div className="texTargetModule">
+              <div className="texTargetLabel">Exam stage</div>
+              <p className="texTargetHint">Prelims is objective-only and comes first; Mains adds further rounds.</p>
+              <div className="texTargetSeg">
                 {(["prelims", "mains", "both"] as TargetExamStage[]).map((s) => (
-                  <button key={s} className={`texToggleBtn ${stage === s ? "active" : ""}`} onClick={() => setStage(s)}>
+                  <button key={s} className={stage === s ? "active" : ""} onClick={() => setStage(s)}>
                     {s[0].toUpperCase() + s.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="texField">
-              <div className="texFieldLabel">When is your exam?</div>
-              <p className="texFieldHint">Don't know the exact date yet? Pick a typical window — we'll adjust once it's announced.</p>
-              <DatePicker value={examDate} onChange={setExamDate} placeholder="Pick your exam date" />
-              <div className="texQuickRow">
-                {[6, 10, 16].map((w) => (
-                  <button key={w} className="texQuickBtn" onClick={() => quickDate(w)}>{w} weeks away</button>
-                ))}
+            <div className="texTargetModule">
+              <div className="texTargetLabel">When is your exam?</div>
+              <p className="texTargetHint">Don't know the exact date yet? Pick a typical window — we'll adjust once it's announced.</p>
+              <div className="texTargetDateRow">
+                <div className="texTminus">
+                  <b>{examDate ? Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000)) : "—"}</b>
+                  <span>Days away</span>
+                </div>
+                <div className="texTargetDateCol">
+                  <DatePicker value={examDate} onChange={setExamDate} placeholder="Pick your exam date" />
+                  <div className="texQuickRow">
+                    {[6, 10, 16].map((w) => (
+                      <button key={w} className="texQuickBtn" onClick={() => quickDate(w)}>{w} weeks away</button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="texField">
-              <div className="texFieldLabel">Total marks</div>
-              <input
-                type="number"
-                className="texMarksInput"
-                min={1}
-                value={totalMarks}
-                onChange={(e) => {
-                  const next = Math.max(1, Number(e.target.value) || 1);
-                  setTotalMarks(next);
-                  setCutoffMarks((c) => Math.min(c, next));
-                }}
-              />
-            </div>
-
-            <div className="texField mvSliderField" style={{ border: "none", padding: 0 }}>
-              <div className="mvSliderHead">
-                <span className="lb">Target cutoff</span>
-                <span className="val">{cutoffMarks}<span> / {totalMarks} &middot; {Math.round((cutoffMarks / totalMarks) * 100)}%</span></span>
+            <div className="texTargetModule">
+              <div className="texTargetLabel">Target cutoff</div>
+              <p className="texTargetHint">Total marks for your exam, and your best estimate of what you'll need to clear it.</p>
+              <div className="texTargetRow">
+                <div className="texMarksBox">
+                  <label>Total marks</label>
+                  <div className="texStepper">
+                    <button onClick={() => { const next = Math.max(1, totalMarks - 5); setTotalMarks(next); setCutoffMarks((c) => Math.min(c, next)); }}>−</button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={totalMarks}
+                      onChange={(e) => {
+                        const next = Math.max(1, Number(e.target.value) || 1);
+                        setTotalMarks(next);
+                        setCutoffMarks((c) => Math.min(c, next));
+                      }}
+                    />
+                    <button onClick={() => setTotalMarks((t) => t + 5)}>+</button>
+                  </div>
+                </div>
+                <div className="texGaugeWrap">
+                  <div
+                    className="texGauge"
+                    style={{ background: `conic-gradient(#3fa5ff 0deg ${(cutoffMarks / totalMarks) * 360}deg, #1c2d45 ${(cutoffMarks / totalMarks) * 360}deg 360deg)` }}
+                  >
+                    <div className="texGaugeHole">
+                      <b>{cutoffMarks}</b>
+                      <span>of {totalMarks} &middot; {Math.round((cutoffMarks / totalMarks) * 100)}%</span>
+                    </div>
+                  </div>
+                  <div className="texGaugeSliderCol">
+                    <input
+                      type="range"
+                      min={Math.round(totalMarks * 0.3)}
+                      max={Math.round(totalMarks * 0.95)}
+                      value={cutoffMarks}
+                      onChange={(e) => setCutoffMarks(Number(e.target.value))}
+                    />
+                    <div className="texGaugeMinMax"><span>{Math.round(totalMarks * 0.3)}</span><span>{Math.round(totalMarks * 0.95)}</span></div>
+                  </div>
+                </div>
               </div>
-              <p className="texFieldHint" style={{ marginTop: -4 }}>Your best estimate of what you'll need to clear this exam.</p>
-              <input
-                type="range"
-                min={Math.round(totalMarks * 0.3)}
-                max={Math.round(totalMarks * 0.95)}
-                value={cutoffMarks}
-                onChange={(e) => setCutoffMarks(Number(e.target.value))}
-              />
-              <div className="mvRangeHint"><span>{Math.round(totalMarks * 0.3)}</span><span>{Math.round(totalMarks * 0.95)}</span></div>
             </div>
           </div>
           <div className="texFoot">

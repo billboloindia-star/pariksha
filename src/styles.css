@@ -1899,6 +1899,66 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   padding:4px 9px;border-radius:999px;
 }
 
+/* ---- Set your target (step 2): dark console, matches plan-review language ---- */
+.texTargetShell{
+  position:relative;overflow:hidden;background:linear-gradient(180deg,#0b1626,#081222 90%);
+  border:1px solid #1c2d45;border-radius:20px;padding:30px;color:#fff;
+}
+.texTargetModule{position:relative;padding:22px 0;border-bottom:1px solid #1c2d45}
+.texTargetModule:first-child{padding-top:0}
+.texTargetModule:last-child{border-bottom:none;padding-bottom:4px}
+.texTargetLabel{font-weight:700;font-size:14.5px;margin-bottom:4px}
+.texTargetHint{font-size:12px;color:#8296b3;margin:0 0 16px;line-height:1.5;max-width:520px}
+
+.texTargetSeg{display:flex;gap:8px}
+.texTargetSeg button{
+  flex:1;padding:12px;border-radius:10px;border:1.5px solid #263a55;background:#0e1c30;
+  color:#8296b3;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .15s;
+}
+.texTargetSeg button.active{background:linear-gradient(135deg,#3fa5ff,#2170c9);border-color:transparent;color:#fff;box-shadow:0 6px 16px -4px rgba(63,165,255,.4)}
+
+.texTargetDateRow{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.texTminus{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#0e1c30;border:1px solid #263a55;border-radius:14px;padding:14px 22px;min-width:110px;
+}
+.texTminus b{font-family:var(--mono);font-size:28px;color:#3fa5ff}
+.texTminus span{font-size:9px;color:#8296b3;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+.texTargetDateCol{flex:1;min-width:220px}
+
+/* dark overrides for the shared DatePicker component, scoped to this shell */
+.texTargetShell .dpField{background:#0e1c30;border-color:#263a55;color:#8296b3}
+.texTargetShell .dpField:hover{background:#122236;border-color:#3fa5ff}
+.texTargetShell .dpVal{color:#fff}
+.texTargetShell .texQuickBtn{background:#0e1c30;border-color:#263a55;color:#8296b3}
+.texTargetShell .texQuickBtn:hover{color:#fff;border-color:#3fa5ff}
+
+.texTargetRow{display:grid;grid-template-columns:220px 1fr;gap:30px;align-items:center}
+@media (max-width:640px){.texTargetRow{grid-template-columns:1fr}}
+
+.texMarksBox{background:#0e1c30;border:1px solid #263a55;border-radius:14px;padding:16px 18px}
+.texMarksBox label{font-size:11px;color:#8296b3;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.texStepper{display:flex;align-items:center;gap:10px;margin-top:8px}
+.texStepper button{width:32px;height:32px;border-radius:8px;border:1px solid #263a55;background:#0d1a2c;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.texStepper input{flex:1;text-align:center;background:none;border:none;color:#fff;font-family:var(--mono);font-size:22px;font-weight:700;width:60px}
+.texStepper input:focus{outline:none}
+
+.texGaugeWrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.texGauge{width:132px;height:132px;border-radius:50%;position:relative;flex-shrink:0}
+.texGaugeHole{
+  position:absolute;inset:16px;border-radius:50%;background:#0b1626;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px #1c2d45;
+}
+.texGaugeHole b{font-family:var(--mono);font-size:20px;color:#fff}
+.texGaugeHole span{font-size:9px;color:#8296b3;margin-top:1px}
+.texGaugeSliderCol{flex:1;min-width:180px}
+.texGaugeSliderCol input[type=range]{width:100%;appearance:none;height:6px;border-radius:3px;background:#263a55;outline:none}
+.texGaugeSliderCol input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #3fa5ff;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
+.texGaugeMinMax{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:#5c7191;margin-top:6px}
+
 .texPhaseRail{display:flex;flex-direction:column;gap:4px;margin-top:16px;position:relative}
 .texPhaseStage{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:16px 4px;position:relative}
 .texPhaseStage:not(:last-child)::after{
