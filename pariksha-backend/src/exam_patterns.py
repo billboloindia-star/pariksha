@@ -4,9 +4,11 @@ years, used to bias the AI study planner toward topics that are actually
 heavily tested, not just toward whatever the user happens to be weak at.
 
 Provenance varies by exam and is noted in each one's comment:
-- RRB PO Prelims and RRB Clerk Prelims are backed by REAL tallied PYQ papers
-  (memory-based reconstructions, question-by-question topic classification),
-  not estimates - see the comment above each.
+- RRB PO Prelims is backed by 8 REAL memory-based papers across 4 distinct exam
+  dates/shifts (320 Reasoning + 316 Quant questions, question-by-question topic
+  classification), not estimates - see the comment above it for exact sourcing.
+- RRB Clerk Prelims is backed by 1 REAL tallied PYQ paper so far, not an
+  estimate - see the comment above it.
 - Everything else is coaching-institute consensus (Oliveboard, BankersAdda,
   PracticeMock, etc.) cross-checked across several sources as of Nov 2026,
   since IBPS/SBI don't publish an official topic-wise blueprint. These drift
@@ -283,42 +285,64 @@ EXAM_PATTERNS: Dict[str, Dict[str, StagePattern]] = {
         ),
     },
     "RRB PO": {
-        # Prelims section below is from REAL tallied PYQ data (not an estimate):
-        # the 22-Nov-2025 1st-shift memory-based paper, fully read and classified
-        # question-by-question - Reasoning Q1-40 read directly from the source PDF,
-        # Quant from a previously-ingested topic-tagged transcript (Q41-76 of 80;
-        # the source paper's last 4 quant questions weren't captured, so that
-        # section's count is "of 36 tallied", not "of 40").
+        # Prelims section below is from REAL tallied PYQ data across 8 full memory-based
+        # papers (320 Reasoning + 316 of 320 Quant questions read and topic-classified
+        # question-by-question): 22-Nov-2025 1st & 2nd shift, 4-Aug-2024 shift S2 + an
+        # unlabeled shift ("Memory Based Paper"), and 3-Aug-2024 shifts S2/S3/S4 + an
+        # unlabeled shift. (One paper's last 4 Quant questions weren't captured in its
+        # source transcript, hence 316 not 320.) This is a real sample across 4 distinct
+        # exam dates/shifts, not a single paper's quirks.
         "prelims": StagePattern(
             total_questions=80, total_marks=80, total_minutes=45, sectional_timer=False,
             sections=[
                 SectionPattern("Reasoning", 40, 20, {
-                    "Puzzles & Seating Arrangement (circular/linear/box/floor, all variants combined)": "23 of 40 - dominant, well over half the section",
-                    "Syllogism": "4",
-                    "Inequality": "3",
-                    "Direction Sense": "3",
-                    "Blood Relation / Family": "3",
-                    "Number-based (digit pairs/manipulation)": "2",
-                    "Alphabet Classification": "1",
-                    "Word Formation": "1",
+                    "Puzzles & Seating Arrangement (circular/linear/box/floor/ranking, all variants combined)": "~23-24 of 40 on average (189 of 320 across 8 papers) - dominant, well over half the section every single time",
+                    "Syllogism": "~3-4 of 40 (27 of 320)",
+                    "Coding-Decoding": "~3-4 of 40 when present (25 of 320) - but COMPLETELY ABSENT in 2 of the 8 papers, so don't assume it's guaranteed",
+                    "Inequality": "~2-3 of 40 (21 of 320)",
+                    "Blood Relation / Family": "~2-3 of 40 (21 of 320)",
+                    "Number-based (digit/letter pairs, digit manipulation)": "~1-2 of 40 (14 of 320)",
+                    "Word Formation": "~1 of 40 (10 of 320)",
+                    "Direction Sense": "~1 of 40 (7 of 320)",
+                    "Alphabet Classification": "~1 of 40 (6 of 320)",
                 }),
                 SectionPattern("Quant", 40, 25, {
-                    "Data Interpretation": "10 of 36 tallied",
-                    "Arithmetic (Average/Ratio/SI-CI/Profit-Loss/Time-Work etc.)": "10 of 36 tallied",
-                    "Approximation": "6 of 36 tallied",
-                    "Quadratic Equations": "5 of 36 tallied",
-                    "Number Series": "5 of 36 tallied",
+                    "Arithmetic (Average/Ratio/SI-CI/Profit-Loss/Time-Work/Partnership/Mixture etc.)": "~25-26 of 40 (102 of 316)",
+                    "Data Interpretation": "~24-25 of 40 (97 of 316) - essentially tied with Arithmetic as the biggest topic, NOT a distant second as a single-paper sample would suggest",
+                    "Approximation": "~11 of 40 (45 of 316) - the most CONSISTENT quant topic, present in every single paper at a stable count",
+                    "Number Series": "~11 of 40 (43 of 316) - equally consistent, present every paper",
+                    "Quadratic Equations": "~13 of 40 when present (26 of 316) - but present in only 5 of the 8 papers as one contiguous 5-6 question block; absent entirely in the other 3",
+                    "Data Sufficiency (Statement I/II or Quantity I/II format)": "rare - only 3 of 316 total, seen in 2 of 8 papers",
                 }),
             ],
             strategy=(
                 "RRB Prelims is COMPOSITE-timed (45 minutes for the whole paper), not hard-sectioned "
-                "like IBPS/SBI - you can shift time between Reasoning and Quant as needed, which is a "
-                "real tactical difference worth planning around (e.g. banking extra time from a strong "
-                "section into a weaker one). Slightly shorter and less dense than IBPS/SBI Prelims (80 "
-                "vs 100 questions), with no English section at this stage. Puzzles alone eat well over "
-                "half the Reasoning section in real papers - strong puzzle-solving speed matters more "
-                "here than almost anywhere else in the syllabus; Quant is comparatively balanced across "
-                "its top 4-5 topics, so no single quant topic carries the section the way puzzles do."
+                "like IBPS/SBI - you can shift time between Reasoning and Quant as needed. Slightly "
+                "shorter than IBPS/SBI Prelims (80 vs 100 questions), no English section at this stage.\n"
+                "\n"
+                "REASONING - what the puzzles actually look like: every paper analyzed had a 5-question "
+                "floor/box-stacking puzzle block, and most had a separate 3-5 question non-seating "
+                "comparison puzzle (persons ranked/compared by age, birth year, or exam rank rather than "
+                "physically seated) - both count as 'puzzles' for prep purposes even though neither "
+                "involves a seating diagram. About half the papers include a circular-table arrangement "
+                "where some people face inward and some face outward - the recurring trap there is that "
+                "'left'/'right' flips meaning depending which way each person individually faces, so "
+                "always re-derive direction per-person rather than assuming one shared orientation. "
+                "Syllogism and Inequality questions very frequently use 'either conclusion I or II "
+                "follows' and 'is a possibility' (not 'definitely follows') as answer options across "
+                "nearly every paper - the real skill being tested is telling 'definitely true', "
+                "'possible but not certain', and 'either/or' apart, which is where most marks are lost, "
+                "not the base logic itself.\n"
+                "\n"
+                "QUANT - what to expect: DI sets in these papers are usually NARRATIVE/caselet style "
+                "(data about named cities, villages, schools or companies referenced across 5-6 linked "
+                "questions) rather than a literal printed grid table, and most papers have TWO OR THREE "
+                "separate DI blocks, not just one - this is why DI ties Arithmetic for the single "
+                "biggest quant topic once measured across real papers, not a clear second place. When "
+                "Quadratic Equations show up, most individual equation pairs factor cleanly with small "
+                "integer roots (fast elimination/guess-the-factor-pair works for most of them) but not "
+                "every one does, so keep the formula as a fallback rather than relying on guessing alone - "
+                "and don't assume every shift has a quadratic block at all, since 3 of 8 papers had none."
             ),
             source="pyq",
         ),
