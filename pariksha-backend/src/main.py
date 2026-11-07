@@ -729,12 +729,27 @@ def _weak_topics_for_plan(attempts: list, chapter_to_section: dict) -> List[Weak
     return out[:20]
 
 
+def _attempted_count(a: dict) -> int:
+    return max(0, int(a.get("total", 0)) - int(a.get("skipped", 0)))
+
+
 def _recent_avg_accuracy(attempts: list, days: int) -> float:
+    """Volume-weighted, not a plain mean of per-attempt percentages - a
+    1-question dash answered correctly would otherwise read as "100%
+    accuracy" and count exactly as much as a fully completed paper. Attempts
+    where fewer than 5 questions were actually answered (abandoned early)
+    are excluded entirely rather than diluted in, since a handful of
+    answers isn't a reliable accuracy signal on its own."""
     cutoff = int(time.time() * 1000) - days * 86400000
     recent = [a for a in attempts if int(a.get("when", 0)) >= cutoff]
-    if not recent:
+    meaningful = [a for a in recent if _attempted_count(a) >= 5]
+    if not meaningful:
         return 0.0
-    return round(sum(_attempt_accuracy(a) for a in recent) / len(recent), 1)
+    total_attempted = sum(_attempted_count(a) for a in meaningful)
+    if total_attempted <= 0:
+        return 0.0
+    total_correct = sum(int(a.get("correct", 0)) for a in meaningful)
+    return round(total_correct / total_attempted * 100, 1)
 
 
 def _day_str(ms: int) -> str:
@@ -885,7 +900,11 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
     exam_date_ms = int(datetime(exam_date.year, exam_date.month, exam_date.day, tzinfo=timezone.utc).timestamp() * 1000)
 
     current_avg = _recent_avg_accuracy(attempts, days=7)
-    readiness, status = _readiness(current_avg, float(item["targetCutoff"]), int(item["acceptedAt"]), exam_date_ms)
+    has_meaningful_attempt = any(_attempted_count(a) >= 5 for a in attempts)
+    if not has_meaningful_attempt:
+        readiness, status = 0, "behind"
+    else:
+        readiness, status = _readiness(current_avg, float(item["targetCutoff"]), int(item["acceptedAt"]), exam_date_ms)
     streak = _compute_streak([int(a.get("when", 0)) for a in attempts])
     calendar, missed_week = _compute_calendar(attempts, int(item["acceptedAt"]))
 
