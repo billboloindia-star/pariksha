@@ -18,6 +18,7 @@ provider:
     BANK_TABLE: pariksha-bank-${self:provider.stage}
     BANK_IMAGES_BUCKET: pariksha-bank-images-${self:provider.stage}-${aws:accountId}
     TARGET_EXAM_TABLE: pariksha-target-exam-${self:provider.stage}
+    TOPIC_MAP_TABLE: pariksha-topic-map-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -61,6 +62,11 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.TARGET_EXAM_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.TOPIC_MAP_TABLE}
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -186,6 +192,22 @@ resources:
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
+
+    TopicMapTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TOPIC_MAP_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: topicNorm
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: topicNorm
+            KeyType: RANGE
 
     LibraryBucket:
       Type: AWS::S3::Bucket

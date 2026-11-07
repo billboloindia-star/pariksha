@@ -20,8 +20,9 @@ from mangum import Mangum
 from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
 from src.config import settings
-from src.db import attempts_table, bank_table, library_table, s3, target_exam_table, users_table
-from src.exam_plan import ExamPlanInput, ExamPlanner, WeakTopicInput
+from src.db import attempts_table, bank_table, library_table, s3, target_exam_table, topic_map_table, users_table
+from src.exam_plan import ExamPlanInput, ExamPlanner, SectionConfidenceInput, WeakTopicInput
+from src.topic_resolver import BankChapterOption, TopicResolveInput, TopicResolver
 from src.models import (
     AdaptiveLogEntry,
     AttemptRecord,
@@ -44,12 +45,17 @@ from src.models import (
     PracticePaperRequest,
     ProfileUpdate,
     QuestionNoteUpdate,
+    SectionConfidence,
     TargetExamAcceptRequest,
     TargetExamGenerateRequest,
     TargetExamPhase,
     TargetExamPlan,
     TargetExamState,
     TargetExamTask,
+    TopicCandidate,
+    TopicConfirmRequest,
+    TopicResolveRequest,
+    TopicResolveResponse,
 )
 
 MAX_LIBRARY_FILE_BYTES = 6 * 1024 * 1024
@@ -59,6 +65,7 @@ ALLOWED_AVATAR_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "
 
 _reviewer = GeminiReviewer()
 _planner = ExamPlanner()
+_resolver = TopicResolver()
 
 app = FastAPI(title="Pariksha API")
 
@@ -554,6 +561,123 @@ def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(req
     return paper
 
 
+def _normalize_topic_for_cache(s: str) -> str:
+    """Mirrors the frontend's normalizeTopic() in Progress.tsx exactly - the
+    two MUST agree, or a topic resolved once never hits the cache again.
+    Deliberately a distinct name from the Target Exam section's own
+    _normalize_topic() below (different, incompatible normalization used
+    for weak-topic dedup there) - do not merge them."""
+    norm = re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+    return re.sub(r"s\b", "", norm)
+
+
+def _bank_chapters_with_section(email: str) -> list[dict]:
+    items = _query_all(
+        bank_table,
+        KeyConditionExpression=Key("userId").eq(email),
+        ProjectionExpression="#sec, chapter",
+        ExpressionAttributeNames={"#sec": "section"},
+    )
+    seen: set[tuple[str, str]] = set()
+    out: list[dict] = []
+    for it in items:
+        key = (it.get("section"), it.get("chapter"))
+        if key[0] and key[1] and key not in seen:
+            seen.add(key)
+            out.append({"section": key[0], "chapter": key[1]})
+    return out
+
+
+def _repair_chapter(value: str | None, chapter_to_section: dict[str, str]) -> tuple[str, str] | None:
+    """Gemini is told the chapter list as "[Section] Chapter" lines and
+    occasionally echoes that bracket format back verbatim in its own
+    "chapter" field instead of the bare name - confirmed live (e.g. it
+    returned "[Quant] Boats & Streams"). A chapter string that doesn't
+    exactly match a real bank chapter is actively dangerous to trust (it'd
+    silently break the practice-builder deep link), so repair it against
+    the known-good list rather than ever trusting Gemini's own `section`
+    field - the section is derived here, not taken from the AI response."""
+    if not value:
+        return None
+    if value in chapter_to_section:
+        return value, chapter_to_section[value]
+    stripped = re.sub(r"^\[[^\]]*\]\s*", "", value).strip()
+    if stripped in chapter_to_section:
+        return stripped, chapter_to_section[stripped]
+    return None
+
+
+@app.post("/bank/resolve-topic", response_model=TopicResolveResponse)
+def resolve_topic(body: TopicResolveRequest, email: str = Depends(require_premium)):
+    """Last-resort fallback for when the frontend's own deterministic
+    findMatch() (exact / normalized / substring against bank chapters)
+    found nothing for a weak-topic name. Tries a per-user cache before ever
+    calling Gemini, and writes back to that cache on a confident AI result
+    so the same topic never needs a second AI call."""
+    norm = _normalize_topic_for_cache(body.topic)
+    if not norm:
+        return TopicResolveResponse(candidates=[])
+
+    cached = topic_map_table.get_item(Key={"userId": email, "topicNorm": norm}).get("Item")
+    if cached:
+        return TopicResolveResponse(section=cached["section"], chapter=cached["chapter"], source="cache")
+
+    chapters = _bank_chapters_with_section(email)
+    if not chapters:
+        return TopicResolveResponse(candidates=[])
+    chapter_to_section = {c["chapter"]: c["section"] for c in chapters}
+
+    try:
+        out = _resolver.resolve(TopicResolveInput(
+            topic=body.topic,
+            chapters=[BankChapterOption(**c) for c in chapters],
+        ))
+    except Exception:
+        raise HTTPException(status_code=502, detail="Couldn't resolve that topic — try again.")
+
+    if out.confident and out.chapter:
+        repaired = _repair_chapter(out.chapter, chapter_to_section)
+        if repaired:
+            chapter, section = repaired
+            topic_map_table.put_item(Item={
+                "userId": email,
+                "topicNorm": norm,
+                "topic": body.topic,
+                "section": section,
+                "chapter": chapter,
+                "resolvedBy": "ai",
+                "createdAt": int(time.time() * 1000),
+            })
+            return TopicResolveResponse(section=section, chapter=chapter, source="ai")
+        # Gemini said it was confident but named a chapter that isn't real,
+        # even after repair - don't trust it, fall through to candidates.
+
+    candidates: list[TopicCandidate] = []
+    for c in out.candidates:
+        repaired = _repair_chapter(c.chapter, chapter_to_section)
+        if repaired:
+            chapter, section = repaired
+            candidates.append(TopicCandidate(section=section, chapter=chapter))
+    return TopicResolveResponse(candidates=candidates)
+
+
+@app.post("/bank/confirm-topic")
+def confirm_topic(body: TopicConfirmRequest, email: str = Depends(require_premium)):
+    """Called once the user picks one of /bank/resolve-topic's ambiguous
+    candidates - writes it to the same cache table so next time this exact
+    topic resolves instantly, no AI call, no re-asking the user."""
+    topic_map_table.put_item(Item={
+        "userId": email,
+        "topicNorm": _normalize_topic_for_cache(body.topic),
+        "topic": body.topic,
+        "section": body.section,
+        "chapter": body.chapter,
+        "resolvedBy": "user",
+        "createdAt": int(time.time() * 1000),
+    })
+    return {"ok": True}
+
+
 # ======================================================================
 # Target Exam: a tracked study plan toward one real bank exam, generated by
 # Gemini from the user's actual weak topics and kept in sync with their
@@ -768,6 +892,8 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
 
     return TargetExamState(
         exam=item["exam"], stage=item["stage"], examDate=item["examDate"], targetCutoff=item["targetCutoff"],
+        totalMarks=float(item.get("totalMarks", 100)),
+        sectionConfidence=[SectionConfidence(**c) for c in item.get("sectionConfidence", [])],
         createdAt=item["createdAt"], acceptedAt=item["acceptedAt"], plan=TargetExamPlan(**plan),
         adaptiveLog=adaptive_log,
         daysLeft=days_left, currentAvgAccuracy=current_avg, readiness=readiness, readinessStatus=status,
@@ -795,6 +921,7 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
             exam=body.exam, stage=body.stage, daysUntilExam=days_until,
             targetCutoff=body.targetCutoff, currentAvgAccuracy=current_avg,
             weakTopics=weak, availableChapters=chapters,
+            sectionConfidence=[SectionConfidenceInput(**c.model_dump()) for c in body.sectionConfidence],
         ))
     except Exception:
         raise HTTPException(status_code=502, detail="Couldn't generate a plan — try again.")
@@ -823,6 +950,8 @@ def accept_target_exam_plan(body: TargetExamAcceptRequest, email: str = Depends(
         "stage": body.stage,
         "examDate": body.examDate,
         "targetCutoff": body.targetCutoff,
+        "totalMarks": body.totalMarks,
+        "sectionConfidence": [c.model_dump() for c in body.sectionConfidence],
         "createdAt": now,
         "acceptedAt": now,
         "plan": body.plan.model_dump(),

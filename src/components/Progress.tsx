@@ -117,8 +117,46 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
   const [topicSort, setTopicSort] = useState<"worst" | "best" | "attempts">("worst");
   const [logFilter, setLogFilter] = useState("all");
   const [logPage, setLogPage] = useState(1);
+  const [resolvingTopic, setResolvingTopic] = useState<string | null>(null);
+  const [resolveModal, setResolveModal] = useState<{ topic: string; candidates: { section: string; chapter: string }[] } | null>(null);
 
   const canPractice = api.backendEnabled() && api.canUseBankFeature(session);
+
+  // Last resort for a topic findMatch() can't place: ask the backend to try
+  // its own cache, then Gemini, before ever giving up to a plain "browse the
+  // whole bank" fallback. See src/main.py's /bank/resolve-topic for the
+  // three-tier design (deterministic match -> cache -> AI).
+  async function resolveAndPractice(topic: string) {
+    if (resolvingTopic) return;
+    setResolvingTopic(topic);
+    try {
+      const res = await api.resolveTopicChapter(topic);
+      if (res.section && res.chapter) {
+        onPracticeTopic(res.section, res.chapter);
+      } else if (res.candidates.length > 0) {
+        setResolveModal({ topic, candidates: res.candidates });
+      } else {
+        onBrowseBank(topic);
+      }
+    } catch {
+      onBrowseBank(topic);
+    } finally {
+      setResolvingTopic(null);
+    }
+  }
+
+  async function confirmCandidate(section: string, chapter: string) {
+    const topic = resolveModal?.topic;
+    setResolveModal(null);
+    if (!topic) return;
+    try {
+      await api.confirmTopicChapter(topic, section, chapter);
+    } catch {
+      // the practice session still works even if caching the pick failed -
+      // worst case this topic just asks again next time.
+    }
+    onPracticeTopic(section, chapter);
+  }
 
   useEffect(() => {
     loadHistory().then(setHistory);
@@ -295,7 +333,7 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
   function onTopicRowClick(t: { topic: string; match: { section: string; chapter: string } | null }) {
     if (!canPractice) return;
     if (t.match) onPracticeTopic(t.match.section, t.match.chapter);
-    else onBrowseBank(t.topic);
+    else resolveAndPractice(t.topic);
   }
 
   // ---- live feed: mistakes + session completions, merged and sorted ----
@@ -546,8 +584,13 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
                   {canPractice && match ? (
                     <button className="pgFocusBtn" onClick={() => onPracticeTopic(match.section, match.chapter)}>Practice now &rarr;</button>
                   ) : canPractice && bankSections && bankSections.length > 0 ? (
-                    <button className="pgFocusBtn pgFocusBtnGhost" onClick={() => onBrowseBank(t.topic)} title="No exact chapter match in your bank - browse it instead">
-                      Browse bank &rarr;
+                    <button
+                      className="pgFocusBtn pgFocusBtnGhost"
+                      onClick={() => resolveAndPractice(t.topic)}
+                      disabled={resolvingTopic === t.topic}
+                      title="No exact chapter match - let AI find the right one"
+                    >
+                      {resolvingTopic === t.topic ? <Spinner size={13} inline /> : <>Find chapter &rarr;</>}
                     </button>
                   ) : null}
                 </div>
@@ -672,14 +715,18 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
                   {items.map((t, i) => {
                     const tc = tierColorHex(t.acc);
                     return (
-                      <button key={t.topic} className="pgHeatRow" onClick={() => onTopicRowClick(t)} disabled={!canPractice}>
+                      <button key={t.topic} className="pgHeatRow" onClick={() => onTopicRowClick(t)} disabled={!canPractice || resolvingTopic === t.topic}>
                         <span className="pgHeatRank">{i + 1}</span>
                         <span className="pgHeatDot" style={{ background: tc }} />
                         <span className="pgHeatName">{t.topic}</span>
                         <span className="pgHeatBarTrack"><span className="pgHeatBarFill" style={{ width: `${t.acc}%`, background: tc }} /></span>
                         <span className="pgHeatPct" style={{ color: tc }}>{t.acc}%</span>
                         <span className="pgHeatAtt">{t.att} att</span>
-                        {canPractice && <span className="pgHeatGo">{t.match ? "Practice" : "Browse"} &rarr;</span>}
+                        {canPractice && (
+                          <span className="pgHeatGo">
+                            {resolvingTopic === t.topic ? <Spinner size={11} inline /> : <>{t.match ? "Practice" : "Find"} &rarr;</>}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -836,6 +883,36 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
           </div>
         )}
       </div>
+
+      {resolveModal && (
+        <div className="modalWrap" role="dialog" aria-modal="true" onClick={() => setResolveModal(null)}>
+          <div className="modal pgResolveModal" onClick={(e) => e.stopPropagation()}>
+            <div className="pgResolveBadge"><i />AI couldn&rsquo;t find an exact match</div>
+            <h3>Which chapter matches &ldquo;{resolveModal.topic}&rdquo;?</h3>
+            <p className="muted small" style={{ margin: "0 0 16px" }}>
+              Pick one, and we&rsquo;ll remember it next time &mdash; no AI call needed.
+            </p>
+            <div className="pgCandidateList">
+              {resolveModal.candidates.map((c) => (
+                <button
+                  key={`${c.section}-${c.chapter}`}
+                  className="pgCandidateBtn"
+                  onClick={() => confirmCandidate(c.section, c.chapter)}
+                >
+                  <span>{c.chapter}<span className="pgCandidateSection"> &middot; {c.section}</span></span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              ))}
+            </div>
+            <button
+              className="pgResolveManualBtn"
+              onClick={() => { const topic = resolveModal.topic; setResolveModal(null); onBrowseBank(topic); }}
+            >
+              None of these &mdash; let me browse the bank myself
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

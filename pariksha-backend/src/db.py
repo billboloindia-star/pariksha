@@ -11,5 +11,6 @@ attempts_table = _dynamodb.Table(settings.attempts_table)
 library_table = _dynamodb.Table(settings.library_table)
 bank_table = _dynamodb.Table(settings.bank_table)
 target_exam_table = _dynamodb.Table(settings.target_exam_table)
+topic_map_table = _dynamodb.Table(settings.topic_map_table)
 
 s3 = boto3.client("s3", region_name=settings.aws_region)

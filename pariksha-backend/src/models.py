@@ -206,11 +206,24 @@ class TargetExamPlan(BaseModel):
     dailyHoursEstimate: float
 
 
+class SectionConfidence(BaseModel):
+    section: str
+    level: str  # "very_low" | "average" | "excellent"
+    diagnosticAccuracy: Optional[float] = None
+
+
 class TargetExamGenerateRequest(BaseModel):
     exam: str
     stage: str
     examDate: str  # ISO date, "2026-12-19"
+    # targetCutoff is always the PERCENTAGE of totalMarks (0-100) - every
+    # readiness/gap calculation downstream works in percent, since that's
+    # also the scale currentAvgAccuracy is already on. totalMarks is purely
+    # so the UI can show "62 / 80" instead of a bare, exam-agnostic "62%"
+    # (not every exam is out of 100 - RRB Prelims is out of 80, etc.).
     targetCutoff: float
+    totalMarks: float = 100
+    sectionConfidence: List[SectionConfidence] = []
 
 
 class TargetExamAcceptRequest(BaseModel):
@@ -218,6 +231,8 @@ class TargetExamAcceptRequest(BaseModel):
     stage: str
     examDate: str
     targetCutoff: float
+    totalMarks: float = 100
+    sectionConfidence: List[SectionConfidence] = []
     plan: TargetExamPlan
 
 
@@ -245,6 +260,8 @@ class TargetExamState(BaseModel):
     stage: str
     examDate: str
     targetCutoff: float
+    totalMarks: float = 100
+    sectionConfidence: List[SectionConfidence] = []
     createdAt: int
     acceptedAt: int
     plan: TargetExamPlan
@@ -259,3 +276,25 @@ class TargetExamState(BaseModel):
     todayTasks: List[TargetExamTask]
     calendar: List[CalendarDay]
     missedDaysThisWeek: int
+
+
+class TopicResolveRequest(BaseModel):
+    topic: str
+
+
+class TopicCandidate(BaseModel):
+    section: str
+    chapter: str
+
+
+class TopicResolveResponse(BaseModel):
+    section: Optional[str] = None
+    chapter: Optional[str] = None
+    source: Optional[str] = None  # "cache" | "ai" - absent when falling back to `candidates`
+    candidates: List[TopicCandidate] = []
+
+
+class TopicConfirmRequest(BaseModel):
+    topic: str
+    section: str
+    chapter: str

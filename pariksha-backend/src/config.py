@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     bank_table: str = "pariksha-bank-dev"
     bank_images_bucket: str = ""
     target_exam_table: str = "pariksha-target-exam-dev"
+    topic_map_table: str = "pariksha-topic-map-dev"
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 
