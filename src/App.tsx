@@ -34,7 +34,7 @@ export default function App() {
   const [result, setResult] = useState<ExamResult | null>(null);
   const [examSettings, setExamSettings] = useState<ExamSettings>(resumed?.settings ?? DEFAULT_SETTINGS);
   const [initialProgress] = useState<ExamProgress | undefined>(resumed?.progress);
-  const [vaultSeed, setVaultSeed] = useState<{ section: string; chapters: string[] } | null>(null);
+  const [vaultSeed, setVaultSeed] = useState<{ section: string; chapters: string[]; noMatchTopic?: string } | null>(null);
 
   // Refresh `plan` from the backend once at startup when a cached session
   // exists — the JWT itself doesn't carry plan, so a stale localStorage
@@ -84,8 +84,8 @@ export default function App() {
     setPhase("vault");
   }, []);
 
-  const onBrowseBank = useCallback(() => {
-    setVaultSeed(null);
+  const onBrowseBank = useCallback((noMatchTopic?: string) => {
+    setVaultSeed(noMatchTopic ? { section: "", chapters: [], noMatchTopic } : null);
     setPhase("vault");
   }, []);
 

@@ -5,8 +5,11 @@ import type { BankSectionSummary, Difficulty, Paper } from "../../shared/types";
 interface Props {
   onLoaded: (p: Paper) => void;
   /** Pre-selects a section + chapter(s), e.g. from the "Practice now" button
-   * on the Progress dashboard. Applied once, the first time it's non-null. */
-  seed?: { section: string; chapters: string[] } | null;
+   * on the Progress dashboard. Applied once, the first time it's non-null.
+   * `noMatchTopic` carries the topic name through when no chapter matched it
+   * at all (section is "" in that case) - shown as an honest banner instead
+   * of silently landing on the default section and implying a real match. */
+  seed?: { section: string; chapters: string[]; noMatchTopic?: string } | null;
 }
 
 function GridIcon() {
@@ -232,6 +235,18 @@ export default function MasterVault({ onLoaded, seed }: Props) {
           </div>
         </div>
       </section>
+
+      {seed?.noMatchTopic && (
+        <div className="mvNoMatchBanner">
+          <span className="mvNoMatchIcon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
+          </span>
+          <span>
+            Couldn&rsquo;t find an exact chapter match for &ldquo;{seed.noMatchTopic}&rdquo; in your bank &mdash; here&rsquo;s everything,
+            pick a chapter below.
+          </span>
+        </div>
+      )}
 
       {loadError && <pre className="error">{loadError}</pre>}
 

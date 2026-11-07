@@ -12,7 +12,7 @@ import * as api from "../../shared/api";
 interface Props {
   session: api.Session | null;
   onPracticeTopic: (section: string, chapter: string) => void;
-  onBrowseBank: () => void;
+  onBrowseBank: (noMatchTopic?: string) => void;
 }
 
 function normalizeTopic(s: string): string {
@@ -295,7 +295,7 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
   function onTopicRowClick(t: { topic: string; match: { section: string; chapter: string } | null }) {
     if (!canPractice) return;
     if (t.match) onPracticeTopic(t.match.section, t.match.chapter);
-    else onBrowseBank();
+    else onBrowseBank(t.topic);
   }
 
   // ---- live feed: mistakes + session completions, merged and sorted ----
@@ -546,7 +546,7 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
                   {canPractice && match ? (
                     <button className="pgFocusBtn" onClick={() => onPracticeTopic(match.section, match.chapter)}>Practice now &rarr;</button>
                   ) : canPractice && bankSections && bankSections.length > 0 ? (
-                    <button className="pgFocusBtn pgFocusBtnGhost" onClick={onBrowseBank} title="No exact chapter match in your bank - browse it instead">
+                    <button className="pgFocusBtn pgFocusBtnGhost" onClick={() => onBrowseBank(t.topic)} title="No exact chapter match in your bank - browse it instead">
                       Browse bank &rarr;
                     </button>
                   ) : null}
