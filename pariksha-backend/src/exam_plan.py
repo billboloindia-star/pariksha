@@ -201,6 +201,14 @@ Rules:
   comparable share - do not let one section end up with 8-10 topics while another sits at 1-2
   when both were rated similarly. If a section's own weak-topic/attempt signal is thin, pull more
   of its focusTopics straight from that section's own chapter list above instead of skipping it.
+- Coverage WITHIN a topic matters too. When the real exam pattern above describes one weighted
+  topic as an umbrella over several distinct real chapters (e.g. "Arithmetic (Average/Ratio/SI-CI/
+  Profit-Loss/Time-Work/Partnership/Mixture etc.)" is really ~10 different bank chapters, not one),
+  do not concentrate that topic's time on just 1-2 of those sub-chapters - real exams draw from
+  many different ones each sitting, not the same couple repeatedly. Spread focusTopics across a
+  genuinely diverse set of that umbrella's real sub-chapters (as listed in the valid-chapter names
+  above), proportional to how many phases/weeks are available, not just whichever 1-2 happen to be
+  weakest.
 - focusDistribution values are percentages across study time (by section name, e.g. "Reasoning",
   "Quant"), must sum to 100, weighted toward whichever sections are weakest - factor in the
   starting-point self-assessment above too, not just attempt history, especially for a student
