@@ -37,6 +37,11 @@ class SectionConfidenceInput(BaseModel):
     # need the work, so this is the real signal for picking focusTopics
     # within a section when it's present.
     chapterAccuracy: Optional[Dict[str, float]] = None
+    # Manual per-chapter self-rating (very_low/average/excellent) for a user
+    # who'd rather say directly which chapters they know than take the
+    # diagnostic quiz - weaker than chapterAccuracy (a guess, not measured)
+    # but still finer-grained than the bare section-level `level`.
+    chapterLevels: Optional[Dict[str, str]] = None
 
 
 class ExamPlanInput(BaseModel):
@@ -119,7 +124,12 @@ def _build_prompt(data: ExamPlanInput) -> str:
                 chapter_lines = "\n".join(
                     f"    - {chapter}: {round(acc)}%" for chapter, acc in c.chapterAccuracy.items()
                 )
-                line += f"\n  Per-chapter diagnostic results within {c.section} (use THIS to pick which chapters of {c.section} need focusTopics, not just the section-level rating above):\n{chapter_lines}"
+                line += f"\n  Per-chapter diagnostic results within {c.section} (MEASURED - use THIS to pick which chapters of {c.section} need focusTopics, not just the section-level rating above):\n{chapter_lines}"
+            elif c.chapterLevels:
+                chapter_lines = "\n".join(
+                    f"    - {chapter}: self-rated \"{LEVEL_LABEL.get(lv, lv)}\"" for chapter, lv in c.chapterLevels.items()
+                )
+                line += f"\n  Manual per-chapter self-ratings within {c.section} (a guess, not measured, but still more specific than the section-level rating alone - use THIS to pick which chapters of {c.section} need focusTopics):\n{chapter_lines}"
             conf_blocks.append(line)
         conf_lines = "\n".join(conf_blocks)
         starting_point_block = f"""

@@ -1751,6 +1751,21 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texDiagBtn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(111,66,193,.35)}
 .texDiagBtn:active{transform:translateY(0)}
 
+.texChapterToggle{
+  display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);
+}
+.texChapterToggle:hover{text-decoration:underline}
+.texChapterChevron{transition:transform .15s}
+.texChapterChevron.open{transform:rotate(180deg)}
+.texChapterList{
+  margin-top:10px;padding:12px 14px;border-radius:10px;background:var(--soft);
+  display:flex;flex-direction:column;gap:10px;
+}
+.texChapterRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.texChapterName{font-size:12.5px;font-weight:600;color:var(--ink)}
+.texLevelRow.sm{gap:6px}
+.texLevelBtn.sm{padding:5px 11px;font-size:11.5px}
+
 .modal.wide{max-width:640px;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
 .texDiagTitle{font-size:17px;font-weight:700;margin-bottom:10px}
 .texDiagQList{overflow-y:auto;flex:1;margin:4px 0 14px;padding-right:4px}
