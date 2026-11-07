@@ -1279,3 +1279,169 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .profileBtnDanger{display:flex;align-items:center;gap:6px;background:transparent;color:var(--red);border:1.5px solid #e4b8b8;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
 .profileBtnDanger:hover{background:var(--red);color:#fff;border-color:var(--red)}
 .profileBtnDanger svg{color:inherit}
+
+/* ---------- library paper detail (boarding pass) ---------- */
+.lpdPage{min-height:100vh}
+.lpdShell{display:flex;gap:28px;align-items:flex-start;min-height:100vh}
+@media (max-width:980px){.lpdShell{flex-direction:column;min-height:0}}
+
+.lpdLeft{flex:0 0 46%;max-width:660px;min-width:360px;padding:28px 22px 60px 28px}
+@media (max-width:980px){.lpdLeft{flex:none;max-width:none;min-width:0;padding:22px 18px 0}}
+
+.lpdBack{display:inline-flex;align-items:center;gap:6px;color:var(--dim);font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;margin-bottom:18px;padding:0;font-family:var(--font)}
+.lpdBack:hover{color:var(--blue)}
+
+.lpdRight{
+  flex:1;min-width:0;background:#10161f;display:flex;flex-direction:column;position:sticky;top:0;
+  height:100vh;border-left:1px solid #1c2638;
+}
+@media (max-width:980px){.lpdRight{position:static;height:70vh;margin-top:30px}}
+
+/* ---- ticket ---- */
+.lpdTicketWrap{position:relative;margin-bottom:24px;filter:drop-shadow(0 24px 46px -18px rgba(18,57,95,.45))}
+.lpdTicket{display:flex;border-radius:20px;overflow:visible;position:relative}
+.lpdStubMain{flex:1;background:linear-gradient(135deg,#0d2b49 0%,#12395f 45%,#1a73c7 100%);color:#fff;padding:24px 28px;border-radius:20px 0 0 20px;position:relative;overflow:hidden;min-width:0}
+.lpdStubMain::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:#38bdf8;opacity:.16;filter:blur(40px);top:-100px;right:-60px}
+.lpdEyebrow{position:relative;z-index:1;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:#a9c9f0;text-transform:uppercase;margin-bottom:10px}
+.lpdEyebrow.pending{color:#f0d8a9}
+.lpdEyebrow .live{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
+.lpdEyebrow.pending .live{background:#f0b429;box-shadow:0 0 0 3px rgba(240,180,41,.25)}
+.lpdTitle{position:relative;z-index:1;font-size:18px;font-weight:800;line-height:1.3;margin:0 0 18px}
+.lpdRouteRow{position:relative;z-index:1;display:flex;align-items:center;gap:16px;margin-bottom:4px;flex-wrap:wrap}
+.lpdRouteVal{display:flex;flex-direction:column}
+.lpdRouteVal b{font-family:var(--mono);font-size:24px;font-weight:800;line-height:1}
+.lpdRouteVal span{font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:#a9c9f0;margin-top:6px}
+.lpdRouteDots{flex:1;display:flex;align-items:center;gap:4px;padding-bottom:14px;min-width:24px}
+.lpdRouteDots i{flex:1;height:2px;background:repeating-linear-gradient(90deg,#4f7bb3 0 6px,transparent 6px 12px)}
+.lpdRouteDots svg{color:#9ec5f2;flex-shrink:0}
+.lpdBarcode{position:relative;z-index:1;display:flex;gap:2px;height:26px;align-items:flex-end;margin-top:16px;opacity:.8}
+.lpdBarcode i{display:block;background:#fff;opacity:.55}
+
+.lpdStubAction{
+  width:150px;flex-shrink:0;background:linear-gradient(160deg,#0f6f3b,#1a8f4e 60%,#2fb86a);
+  border-radius:0 20px 20px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px 12px;position:relative;gap:12px;color:#fff;text-align:center;
+}
+.lpdStubAction.pending{background:linear-gradient(160deg,#7a5a0f,#a3791a 60%,#c99a2e)}
+.lpdStubAction .lpdReadyIcon{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.lpdStubAction .lpdReadyLabel{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#d4f5e4}
+.lpdStubAction.pending .lpdReadyLabel{color:#fbeecb}
+.lpdStartBtn{
+  display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;color:#0f6f3b;
+  border:none;border-radius:12px;padding:11px 8px;font-size:13px;font-weight:800;cursor:pointer;width:100%;
+  box-shadow:0 10px 22px -10px rgba(0,0,0,.4);font-family:var(--font)
+}
+.lpdStartBtn.pending{color:#7a5a0f}
+.lpdStartBtn small{font-size:9.5px;font-weight:700;opacity:.75}
+.lpdStartBtn:hover{transform:translateY(-1px)}
+
+.lpdNotch{position:absolute;left:calc(100% - 150px - 13px);width:26px;height:26px;border-radius:50%;background:var(--bg)}
+.lpdNotch.top{top:-13px}
+.lpdNotch.bottom{bottom:-13px}
+.lpdDashSeam{position:absolute;top:13px;bottom:13px;left:calc(100% - 150px - 1px);width:2px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.55) 0 7px,transparent 7px 15px)}
+
+/* ---- timeline ---- */
+.lpdTimeline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px;padding:14px 18px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.lpdTStep{display:flex;align-items:center;gap:8px}
+.lpdTDot{width:22px;height:22px;flex-shrink:0;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px}
+.lpdTStep.pending .lpdTDot{background:var(--line-2)}
+.lpdTText{display:flex;flex-direction:column}
+.lpdTLabel{font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.2}
+.lpdTSub{font-size:10px;color:var(--grey)}
+.lpdTLine{flex:1;height:2px;background:var(--green);min-width:24px}
+.lpdTLine.pending{background:var(--line-2)}
+
+/* ---- console toggle + panel ---- */
+.lpdToggleRow{display:flex;justify-content:center;margin-bottom:20px}
+.lpdToggle{
+  display:inline-flex;align-items:center;gap:9px;background:#121a28;border:1px solid #233049;color:#c3d2ea;
+  font-size:12.5px;font-weight:700;font-family:var(--font);cursor:pointer;padding:10px 16px 10px 14px;border-radius:999px;
+  transition:background .15s,border-color .15s;
+}
+.lpdToggle .lpdDot3{display:flex;gap:3px}
+.lpdToggle .lpdDot3 i{width:4px;height:4px;border-radius:50%;background:#4a5f82}
+.lpdToggle .lpdChev{color:#64749a;transition:transform .2s;margin-left:2px}
+.lpdToggle.open .lpdChev{transform:rotate(180deg)}
+.lpdToggle:hover{background:#1a2336;border-color:#2a3850;color:#fff}
+
+.lpdConsoleWrap{border-radius:18px;margin:-8px 0 26px;overflow:hidden;max-height:0;transition:max-height .3s ease}
+.lpdConsoleWrap.open{max-height:900px}
+.lpdConsole{
+  background:radial-gradient(circle at 15% 0%,#1e2a3f 0%,#121a28 55%,#0c121d 100%);
+  border:1px solid #233049;border-radius:18px;padding:20px 22px 22px;position:relative;overflow:hidden;
+}
+.lpdConsole::before{content:"";position:absolute;width:280px;height:280px;border-radius:50%;background:#1a73c7;opacity:.14;filter:blur(60px);top:-120px;left:40%}
+.lpdConsoleHead{position:relative;z-index:1;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.lpdConsoleDots{display:flex;gap:5px}
+.lpdConsoleDots i{width:9px;height:9px;border-radius:50%;background:#3a4761}
+.lpdConsoleHeadText{font-family:var(--mono);font-size:11px;color:#8ba3c7;letter-spacing:.3px}
+
+.lpdStepFlow{position:relative;z-index:1;display:grid;grid-template-columns:1fr 32px 1fr;gap:0;align-items:stretch}
+@media (max-width:620px){.lpdStepFlow{grid-template-columns:1fr}.lpdFlowArrow{display:none}}
+.lpdStepCol{display:flex;flex-direction:column;min-width:0}
+.lpdStepNum{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:#7fd0ff;letter-spacing:.5px;margin-bottom:10px}
+.lpdStepNum i{width:19px;height:19px;border-radius:50%;background:rgba(127,208,255,.15);border:1px solid rgba(127,208,255,.4);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;flex-shrink:0}
+.lpdStepNumRow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.lpdUploadChip{
+  display:inline-flex;align-items:center;gap:7px;background:rgba(127,208,255,.1);border:1px solid rgba(127,208,255,.3);
+  color:#7fd0ff;font-size:10.5px;font-weight:700;padding:6px 10px;border-radius:999px;cursor:pointer;margin-bottom:10px;
+  transition:background .15s;
+}
+.lpdUploadChip:hover{background:rgba(127,208,255,.18)}
+.lpdFlowArrow{display:flex;align-items:center;justify-content:center;color:#3a4761}
+
+.lpdFileChip{display:flex;align-items:center;gap:9px;background:#1a2336;border:1px solid #2a3850;border-radius:11px;padding:10px 11px;margin-bottom:9px}
+.lpdFileChip .fIcon{color:#7fd0ff;flex-shrink:0}
+.lpdFileChip .fname{font-size:12px;font-weight:600;color:#e7eefb;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lpdFileChip .fsize{font-size:10px;color:#64749a;font-family:var(--mono);flex-shrink:0}
+.lpdFileChip .lpdViewBtn{background:rgba(127,208,255,.14);color:#7fd0ff;border:none;border-radius:7px;padding:5px 9px;font-size:10.5px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:var(--font)}
+.lpdFileChip .lpdViewBtn.active{background:#2491e8;color:#fff}
+.lpdFileChip .lpdDlBtn{color:#64749a;flex-shrink:0;display:flex}
+.lpdFileChip .lpdDlBtn:hover{color:#fff}
+
+.lpdBtnRow{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.lpdBtnSm{border:none;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.lpdBtnSmPrimary{background:linear-gradient(135deg,#2491e8,#1a73c7);color:#fff;box-shadow:0 8px 18px -8px rgba(36,145,232,.6)}
+.lpdBtnSmGhost{background:#1a2336;color:#c3d2ea;border:1px solid #2a3850}
+.lpdSrcHint{font-size:10.5px;color:#64749a;line-height:1.6;margin:0}
+
+.lpdSrcPaste{position:relative;flex:1;display:flex;flex-direction:column;min-width:0}
+.lpdCodeBox{flex:1;position:relative;background:#0c121d;border:1px solid #233049;border-radius:11px;overflow:hidden;min-height:140px;display:flex}
+.lpdCodeBox.dragging{border-color:#2491e8}
+.lpdCodeGutter{width:28px;flex-shrink:0;background:#0a0f18;border-right:1px solid #1c2638;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;color:#3a4761;overflow:hidden}
+.lpdCodeBox textarea{
+  flex:1;background:transparent;border:none;outline:none;resize:vertical;color:#c9e3ff;min-width:0;
+  font-family:var(--mono);font-size:11.5px;line-height:1.5;padding:10px 11px;caret-color:#7fd0ff;
+}
+.lpdCodeBox textarea::placeholder{color:#3f5375}
+.lpdDropOverlay{
+  position:absolute;inset:0;background:rgba(36,145,232,.14);border:2px dashed #2491e8;border-radius:11px;
+  display:none;align-items:center;justify-content:center;color:#9ed4ff;font-size:12px;font-weight:700;
+  font-family:var(--font);pointer-events:none;
+}
+.lpdCodeBox.dragging .lpdDropOverlay{display:flex}
+.lpdSaveRow{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:10px}
+
+/* ---- preview pane ---- */
+.lpdPreviewHead{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-shrink:0;border-bottom:1px solid #1c2638;gap:10px}
+.lpdPreviewHead .ptitle{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;color:#fff;overflow:hidden;min-width:0}
+.lpdPreviewHead .fname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lpdPvBtns{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.lpdPvBtn{background:rgba(255,255,255,.1);border:none;color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0}
+.lpdPvBtn:hover{background:rgba(255,255,255,.2)}
+.lpdFileTabs{display:flex;gap:4px;overflow-x:auto;flex-shrink:0}
+.lpdFileTab{background:rgba(255,255,255,.08);border:none;color:#9aabc9;font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:var(--font)}
+.lpdFileTab.active{background:#2491e8;color:#fff}
+
+.lpdPreviewBody{flex:1;min-height:0;position:relative;display:flex}
+.lpdFrame{flex:1;border:none;background:#fff}
+.lpdImgFrame{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;background:#0c121d;padding:24px}
+.lpdImgFrame img{max-width:100%;max-height:100%;border-radius:6px;box-shadow:0 26px 50px -16px rgba(0,0,0,.6)}
+.lpdPreviewEmpty{flex:1;display:flex;align-items:center;justify-content:center;color:#64749a;font-size:13px;padding:30px;text-align:center}
+
+.lpdRight.fullscreen{position:fixed;inset:0;z-index:300;height:100vh}
+
+/* ---- delete zone (dark variant, sits at the bottom of the left pane) ---- */
+.lpdDeleteZone{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:4px;padding:16px 18px;border:1.5px solid #f6d4cf;background:#fdf4f3;border-radius:14px;flex-wrap:wrap}
+.lpdDeleteZone .dzText b{display:block;font-size:13px;color:var(--ink)}
+.lpdDeleteZone .dzText span{font-size:11.5px;color:var(--dim)}
