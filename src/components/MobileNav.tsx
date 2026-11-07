@@ -71,7 +71,7 @@ export default function MobileNav({ active, onNavigate, session, onLogout }: Pro
             onClick={() => onNavigate(it.phase)}
           >
             {it.icon}
-            <span>{it.label === "Paper vault" ? "Vault" : it.label === "Master Vault" ? "Bank" : it.label}</span>
+            <span>{it.label === "Paper vault" ? "Vault" : it.label === "Master Vault" ? "Bank" : it.label === "Speed Maths" ? "Speed" : it.label}</span>
           </button>
         ))}
       </nav>

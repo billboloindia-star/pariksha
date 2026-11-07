@@ -3,7 +3,7 @@ import * as api from "../../shared/api";
 import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
-export type HubPhase = "home" | "progress" | "library" | "vault" | "profile";
+export type HubPhase = "home" | "progress" | "library" | "vault" | "profile" | "speedmaths";
 
 interface Props {
   active: HubPhase;
@@ -38,6 +38,9 @@ export function LogoutIcon() {
 export function ProfileIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
+export function SpeedMathsIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
+}
 
 export function hubItems(session?: api.Session | null): { phase: HubPhase; label: string; icon: ReactElement }[] {
   return [
@@ -46,6 +49,9 @@ export function hubItems(session?: api.Session | null): { phase: HubPhase; label
     ...(api.backendEnabled() ? [{ phase: "library" as const, label: "Paper vault", icon: <VaultIcon /> }] : []),
     ...(api.backendEnabled() && api.canUseBankFeature(session ?? null)
       ? [{ phase: "vault" as const, label: "Master Vault", icon: <MasterVaultIcon /> }]
+      : []),
+    ...(api.backendEnabled() && api.canUseBankFeature(session ?? null)
+      ? [{ phase: "speedmaths" as const, label: "Speed Maths", icon: <SpeedMathsIcon /> }]
       : []),
   ];
 }
