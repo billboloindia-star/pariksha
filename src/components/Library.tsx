@@ -402,7 +402,6 @@ export default function Library({ onLoaded }: Props) {
     );
   }
 
-  const readyCount = (items ?? []).filter((it) => it.hasPaper).length;
   const shown = (items ?? []).filter((it) => it.title.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
@@ -415,12 +414,6 @@ export default function Library({ onLoaded }: Props) {
           <h1>Keep every paper you convert</h1>
           <p>Upload the files once, run them through the AI-conversion prompt, paste back the result &mdash; it&rsquo;s saved here for good. No file-hunting, no re-converting.</p>
         </div>
-        {items !== null && items.length > 0 && (
-          <>
-            <div className="vaultStat"><b>{items.length}{hasNextPage ? "+" : ""}</b><span>Papers</span></div>
-            <div className="vaultStat"><b>{readyCount}{hasNextPage ? "+" : ""}</b><span>Ready</span></div>
-          </>
-        )}
       </div>
 
       <div className="dropCard">
