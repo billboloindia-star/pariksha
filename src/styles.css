@@ -1825,18 +1825,49 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texFocusChips{display:flex;flex-wrap:wrap;gap:6px}
 .texFocusChip{font-size:12px;font-weight:600;color:var(--ink);background:var(--soft);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
 
-.texContractGroups{display:flex;flex-direction:column;gap:22px;margin-top:14px}
-.texContractSection{padding-bottom:18px;border-bottom:1px solid var(--line)}
-.texContractSection:last-child{border-bottom:none;padding-bottom:0}
-.texContractBucket{margin:14px 0 0 16px}
-.texContractBucketHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
-.texContractBucketLabel{font-size:12.5px;font-weight:700;color:var(--ink);cursor:default;border-bottom:1px dotted var(--line-2)}
-.texContractBucketBadge{
-  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);background:var(--soft);
-  padding:2px 8px;border-radius:999px;white-space:nowrap;cursor:default;
+/* ---- topic contract: dark "mission control" console ---- */
+.texContractShell{
+  position:relative;overflow:hidden;background:linear-gradient(180deg,#0b1626,#081222 90%);
+  border:1px solid #1c2d45;border-radius:18px;padding:26px 28px 10px;margin-bottom:16px;
 }
-.texContractBar{height:4px;border-radius:2px;background:var(--soft);overflow:hidden;margin-bottom:9px;max-width:280px}
-.texContractBarFill{display:block;height:4px;border-radius:2px}
+.texContractGlow{position:absolute;width:380px;height:380px;border-radius:50%;filter:blur(10px);opacity:.14;pointer-events:none}
+.texContractGlow.g1{background:#3fa5ff;top:-170px;left:-110px}
+.texContractGlow.g2{background:#b48cff;bottom:-190px;right:-130px}
+.texContractH2{font-size:18px;margin:0 0 4px;color:#fff;position:relative}
+.texContractSub{font-size:13px;color:#8296b3;margin:0 0 26px;max-width:620px;line-height:1.6;position:relative}
+
+.texContractRow{display:grid;grid-template-columns:200px 1fr;gap:28px;margin-bottom:34px;position:relative}
+@media (max-width:640px){.texContractRow{grid-template-columns:1fr}}
+
+.texContractDonutWrap{display:flex;flex-direction:column;align-items:center}
+.texContractDonut{width:168px;height:168px;border-radius:50%;position:relative;flex-shrink:0}
+.texContractDonutHole{
+  position:absolute;inset:24px;border-radius:50%;background:#0b1626;box-shadow:inset 0 0 0 1px #1c2d45;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.texContractDonutHole b{font-family:var(--mono);font-size:21px;color:#fff}
+.texContractDonutHole span{font-size:9.5px;color:#8296b3;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+.texContractSecTitle{display:flex;align-items:center;gap:7px;margin-top:13px;font-weight:700;font-size:13px;color:#fff}
+.texContractSecDot{width:8px;height:8px;border-radius:50%}
+
+.texContractReadouts{display:flex;flex-direction:column;gap:2px;min-width:0}
+.texContractReadout{
+  display:grid;grid-template-columns:4px 1fr;gap:12px;align-items:stretch;padding:9px 10px;
+  border-radius:9px;transition:background .15s;
+}
+.texContractReadout:hover{background:#0e1c30}
+.texContractReadoutBar{width:4px;border-radius:3px;min-height:34px}
+.texContractReadoutMain{min-width:0}
+.texContractReadoutTop{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;flex-wrap:wrap}
+.texContractReadoutLabel{font-size:12.5px;font-weight:700;color:#fff}
+.texContractReadoutCount{font-family:var(--mono);font-size:10.5px;color:#8296b3;white-space:nowrap}
+.texContractReadoutMeta{font-size:10.5px;color:#5c7191;line-height:1.45;margin-bottom:7px}
+.texContractFlag{color:#ffb347}
+.texContractChipRow{display:flex;flex-wrap:wrap;gap:5px}
+.texContractChip{
+  font-size:10.5px;font-weight:600;background:#0d1a2c;border:1px solid #263a55;color:#cdd9ec;
+  padding:4px 9px;border-radius:999px;
+}
 
 .texPhaseTimeline{position:relative;margin-top:14px;padding-left:22px;border-left:2px solid var(--line)}
 .texPhaseItem{position:relative;padding-bottom:18px}

@@ -79,6 +79,25 @@ function bucketLabel(label: string): string {
   return label.replace(/\s*\([^)]*\)\s*$/, "");
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Mixes a color toward the dark console panel base at t=0, full brightness
+ * at t=1 - used so a section's dominant topic visually glows brightest. */
+function shadeHex(rgb: [number, number, number], t: number): string {
+  const base: [number, number, number] = [14, 24, 40];
+  const mix = rgb.map((c, i) => Math.round(base[i] + (c - base[i]) * t));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+/** Whether a weight note's nuance is worth flagging with a small warning
+ * icon (e.g. "absent in 2 of 8 papers", "rare", "when present"). */
+function isFlaggedNote(note: string): boolean {
+  return /absent|rare|when present|not guaranteed/i.test(note);
+}
+
 function fmtDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -624,47 +643,74 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             </div>
           </div>
 
-          <div className="texCard">
+          <div className={generatedPlan.topicContract?.length ? "texContractShell" : "texCard"}>
             {generatedPlan.topicContract?.length ? (
               <>
-                <h2 className="texCardH2">Your topic contract</h2>
-                <p className="texCardSub">
+                <div className="texContractGlow g1" />
+                <div className="texContractGlow g2" />
+                <h2 className="texContractH2">Your topic contract</h2>
+                <p className="texContractSub">
                   Built from {selectedExam}'s real exam pattern and your own weak-topic / confidence state — this is
                   exactly what the plan below is based on.
                 </p>
-                <div className="texContractGroups">
-                  {generatedPlan.topicContract.map((sec, i) => {
-                    const accent = FOCUS_COLORS[sec.section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length];
-                    const maxWeight = Math.max(1, ...sec.buckets.map((b) => b.weightCount));
-                    return (
-                      <div key={sec.section} className="texContractSection">
-                        <div className="texFocusGroupHead">
-                          <span className="texFocusGroupDot" style={{ background: accent }} />
-                          <span className="texFocusGroupName">{sec.section}</span>
-                          <span className="texContractSectionNote">
-                            — a real {sec.section} paper has {sec.buckets[0]?.sectionTotal ?? "?"} questions; the numbers below are how many typically come from each topic
-                          </span>
-                        </div>
-                        {sec.buckets.map((b) => (
-                          <div key={b.label} className="texContractBucket">
-                            <div className="texContractBucketHead">
-                              <span className="texContractBucketLabel" title={b.weightNote}>{bucketLabel(b.label)}</span>
-                              <span className="texContractBucketBadge" title={b.weightNote}>~{Math.round(b.weightCount)} of {b.sectionTotal} Qs</span>
-                            </div>
-                            <div className="texContractBar">
-                              <span className="texContractBarFill" style={{ width: `${(b.weightCount / maxWeight) * 100}%`, background: accent }} />
-                            </div>
-                            <div className="texFocusChips">
-                              {b.chapters.map((c) => (
-                                <span key={c.chapter} className="texFocusChip" title={c.reason}>{c.chapter}</span>
-                              ))}
-                            </div>
+                {generatedPlan.topicContract.map((sec, i) => {
+                  const accentHex = FOCUS_COLORS[sec.section] ?? FOCUS_FALLBACK[i % FOCUS_FALLBACK.length];
+                  const rgb = hexToRgb(accentHex);
+                  const maxWeight = Math.max(1, ...sec.buckets.map((b) => b.weightCount));
+                  const totalWeight = sec.buckets.reduce((s, b) => s + b.weightCount, 0);
+                  let cum = 0;
+                  const stops = sec.buckets.map((b, bi) => {
+                    const t01 = 0.4 + 0.6 * (b.weightCount / maxWeight);
+                    const color = shadeHex(rgb, t01);
+                    const startPct = (cum / totalWeight) * 100;
+                    cum += b.weightCount;
+                    const gap = 0.6;
+                    const endPct = (cum / totalWeight) * 100;
+                    return `${color} ${startPct + (bi > 0 ? gap : 0)}% ${endPct - gap}%`;
+                  });
+                  return (
+                    <div key={sec.section} className="texContractRow">
+                      <div className="texContractDonutWrap">
+                        <div className="texContractDonut" style={{ background: `conic-gradient(${stops.join(",")})` }}>
+                          <div className="texContractDonutHole">
+                            <b>{Math.round(totalWeight)}</b>
+                            <span>of {sec.buckets[0]?.sectionTotal ?? 40} Qs</span>
                           </div>
-                        ))}
+                        </div>
+                        <div className="texContractSecTitle">
+                          <span className="texContractSecDot" style={{ background: accentHex }} />
+                          {sec.section}
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="texContractReadouts">
+                        {sec.buckets.map((b) => {
+                          const t01 = 0.4 + 0.6 * (b.weightCount / maxWeight);
+                          const color = shadeHex(rgb, t01);
+                          return (
+                            <div key={b.label} className="texContractReadout">
+                              <span className="texContractReadoutBar" style={{ background: color }} />
+                              <div className="texContractReadoutMain">
+                                <div className="texContractReadoutTop">
+                                  <span className="texContractReadoutLabel">{bucketLabel(b.label)}</span>
+                                  <span className="texContractReadoutCount">~{Math.round(b.weightCount)} of {b.sectionTotal} Qs</span>
+                                </div>
+                                <div className="texContractReadoutMeta">
+                                  {isFlaggedNote(b.weightNote) && <span className="texContractFlag">⚠ </span>}
+                                  {b.weightNote}
+                                </div>
+                                <div className="texContractChipRow">
+                                  {b.chapters.map((c) => (
+                                    <span key={c.chapter} className="texContractChip" title={c.reason}>{c.chapter}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </>
             ) : (
               <>
