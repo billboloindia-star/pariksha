@@ -1680,13 +1680,22 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texToggleRow{display:flex;gap:8px}
 .texToggleBtn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line-2);background:#fff;font-weight:600;font-size:13px}
 .texToggleBtn.active{background:var(--blue);border-color:var(--blue);color:#fff}
-.texDateInput{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line-2);font-size:14px;font-family:var(--font)}
-.texQuickRow{display:flex;gap:8px;margin-top:10px}
-.texQuickBtn{padding:7px 12px;border-radius:6px;border:1px solid var(--line);background:var(--soft);font-size:12px;font-weight:600;color:var(--dim)}
+.texDateField{
+  display:flex;align-items:center;gap:10px;width:100%;max-width:280px;padding:11px 13px;border-radius:10px;
+  border:1.5px solid var(--line-2);background:var(--soft);color:var(--grey);cursor:text;transition:border-color .12s,background .12s;
+}
+.texDateField:focus-within{border-color:var(--blue);background:#fff}
+.texDateField input[type=date]{
+  flex:1;border:none;background:none;outline:none;font-size:14px;font-family:var(--font);color:var(--ink);padding:0;
+}
+.texQuickRow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.texQuickBtn{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--soft);font-size:12px;font-weight:700;color:var(--dim)}
 .texQuickBtn:hover{color:var(--ink);border-color:var(--line-2)}
-.texSliderRow{display:flex;align-items:center;gap:14px}
-.texSliderRow input[type=range]{flex:1}
-.texSliderVal{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--blue);width:36px;text-align:right}
+.texMarksInput{
+  width:140px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line-2);background:var(--soft);
+  font-size:15px;font-weight:700;font-family:var(--mono);color:var(--ink);transition:border-color .12s,background .12s;
+}
+.texMarksInput:focus{outline:none;border-color:var(--blue);background:#fff}
 
 .texFoot{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
 .texFoot .btn.lg{padding:12px 22px}
@@ -1822,3 +1831,15 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
   .texGapRow{border-left:none;padding-left:0;border-top:1px solid rgba(255,255,255,.15);padding-top:16px}
   .texMainGrid{grid-template-columns:1fr}
 }
+
+/* ---------- AI topic-resolve candidate picker (Progress.tsx) ---------- */
+.pgResolveModal{max-width:420px}
+.pgResolveBadge{display:inline-flex;align-items:center;gap:7px;background:#f3edfc;color:var(--purple);font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;margin-bottom:14px}
+.pgResolveBadge i{width:6px;height:6px;border-radius:50%;background:var(--purple);display:inline-block}
+.pgCandidateList{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.pgCandidateBtn{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px solid var(--line);background:var(--soft);border-radius:12px;padding:12px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--ink);text-align:left;font-family:var(--font);width:100%}
+.pgCandidateBtn:hover{border-color:var(--purple);background:#f8f4fe}
+.pgCandidateBtn svg{color:var(--grey);flex-shrink:0}
+.pgCandidateSection{font-weight:600;color:var(--dim)}
+.pgResolveManualBtn{width:100%;background:none;border:none;color:var(--dim);font-size:12px;font-weight:700;padding:8px;cursor:pointer;font-family:var(--font);text-decoration:underline;text-underline-offset:3px}
+.pgResolveManualBtn:hover{color:var(--purple)}

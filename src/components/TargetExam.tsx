@@ -37,6 +37,25 @@ const FOCUS_COLORS: Record<string, string> = {
 };
 const FOCUS_FALLBACK = ["#1a73c7", "#6f42c1", "#2f8f4e", "#b4740e", "#c0392b"];
 
+// Approximate Prelims/Mains totals per exam - not every exam shares
+// IBPS/SBI's 100-mark Prelims (RRB's is out of 80). These are just a
+// sensible starting point; the field stays editable since exact totals
+// can shift year to year.
+const DEFAULT_TOTAL_MARKS: Record<TargetExamName, { prelims: number; mains: number }> = {
+  "IBPS PO": { prelims: 100, mains: 200 },
+  "SBI PO": { prelims: 100, mains: 250 },
+  "IBPS Clerk": { prelims: 100, mains: 200 },
+  "SBI Clerk": { prelims: 100, mains: 200 },
+  "RRB PO": { prelims: 80, mains: 200 },
+  "RRB Clerk": { prelims: 80, mains: 200 },
+};
+
+function defaultTotalMarks(exam: TargetExamName | null, stage: TargetExamStage): number {
+  if (!exam) return 100;
+  const t = DEFAULT_TOTAL_MARKS[exam];
+  return stage === "prelims" ? t.prelims : t.mains;
+}
+
 function fmtDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -52,11 +71,18 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   const [selectedExam, setSelectedExam] = useState<TargetExamName | null>(null);
   const [stage, setStage] = useState<TargetExamStage>("prelims");
   const [examDate, setExamDate] = useState("");
-  const [cutoff, setCutoff] = useState(75);
+  const [totalMarks, setTotalMarks] = useState(100);
+  const [cutoffMarks, setCutoffMarks] = useState(75);
   const [genStepIndex, setGenStepIndex] = useState(-1);
   const [generatedPlan, setGeneratedPlan] = useState<TargetExamPlan | null>(null);
   const [genError, setGenError] = useState("");
   const [accepting, setAccepting] = useState(false);
+
+  useEffect(() => {
+    const def = defaultTotalMarks(selectedExam, stage);
+    setTotalMarks(def);
+    setCutoffMarks(Math.round(def * 0.75));
+  }, [selectedExam, stage]);
 
   useEffect(() => {
     api.fetchTargetExam()
@@ -91,8 +117,9 @@ export default function TargetExam({ onPracticeTopic }: Props) {
     const timer = setInterval(() => {
       setGenStepIndex((i) => Math.min(GEN_STEPS.length - 1, i + 1));
     }, 650);
+    const targetCutoffPercent = Math.round((cutoffMarks / totalMarks) * 100);
     try {
-      const plan = await api.generateTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: cutoff });
+      const plan = await api.generateTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks });
       clearInterval(timer);
       setGeneratedPlan(plan);
       setGenStepIndex(GEN_STEPS.length);
@@ -106,8 +133,9 @@ export default function TargetExam({ onPracticeTopic }: Props) {
   async function accept() {
     if (!selectedExam || !examDate || !generatedPlan) return;
     setAccepting(true);
+    const targetCutoffPercent = Math.round((cutoffMarks / totalMarks) * 100);
     try {
-      const s = await api.acceptTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: cutoff, plan: generatedPlan });
+      const s = await api.acceptTargetExamPlan({ exam: selectedExam, stage, examDate, targetCutoff: targetCutoffPercent, totalMarks, plan: generatedPlan });
       setState(s);
     } catch (err) {
       setGenError(err instanceof Error ? err.message : "Couldn't save your plan — try again.");
@@ -188,7 +216,10 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             <div className="texField">
               <div className="texFieldLabel">When is your exam?</div>
               <p className="texFieldHint">Don't know the exact date yet? Pick a typical window — we'll adjust once it's announced.</p>
-              <input type="date" className="texDateInput" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+              <label className="texDateField">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" strokeLinecap="round" /></svg>
+                <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+              </label>
               <div className="texQuickRow">
                 {[6, 10, 16].map((w) => (
                   <button key={w} className="texQuickBtn" onClick={() => quickDate(w)}>{w} weeks away</button>
@@ -197,12 +228,35 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             </div>
 
             <div className="texField">
-              <div className="texFieldLabel">Target cutoff (out of 100)</div>
-              <p className="texFieldHint">Your best estimate of what you'll need to clear this exam.</p>
-              <div className="texSliderRow">
-                <input type="range" min={40} max={95} value={cutoff} onChange={(e) => setCutoff(Number(e.target.value))} />
-                <span className="texSliderVal">{cutoff}</span>
+              <div className="texFieldLabel">Total marks</div>
+              <p className="texFieldHint">Not every exam is out of 100 — RRB Prelims is out of 80, for example. Adjust if this year's pattern differs.</p>
+              <input
+                type="number"
+                className="texMarksInput"
+                min={1}
+                value={totalMarks}
+                onChange={(e) => {
+                  const next = Math.max(1, Number(e.target.value) || 1);
+                  setTotalMarks(next);
+                  setCutoffMarks((c) => Math.min(c, next));
+                }}
+              />
+            </div>
+
+            <div className="texField mvSliderField" style={{ border: "none", padding: 0 }}>
+              <div className="mvSliderHead">
+                <span className="lb">Target cutoff</span>
+                <span className="val">{cutoffMarks}<span> / {totalMarks} &middot; {Math.round((cutoffMarks / totalMarks) * 100)}%</span></span>
               </div>
+              <p className="texFieldHint" style={{ marginTop: -4 }}>Your best estimate of what you'll need to clear this exam.</p>
+              <input
+                type="range"
+                min={Math.round(totalMarks * 0.3)}
+                max={Math.round(totalMarks * 0.95)}
+                value={cutoffMarks}
+                onChange={(e) => setCutoffMarks(Number(e.target.value))}
+              />
+              <div className="mvRangeHint"><span>{Math.round(totalMarks * 0.3)}</span><span>{Math.round(totalMarks * 0.95)}</span></div>
             </div>
           </div>
           <div className="texFoot">
@@ -248,7 +302,7 @@ export default function TargetExam({ onPracticeTopic }: Props) {
             <div className="texPlanStats">
               <div className="texPlanStat"><b>{Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000))}</b><span>Days left</span></div>
               <div className="texPlanStat"><b>~{generatedPlan.dailyHoursEstimate}h</b><span>Daily target</span></div>
-              <div className="texPlanStat"><b>{cutoff}%</b><span>Target cutoff</span></div>
+              <div className="texPlanStat"><b>{cutoffMarks}/{totalMarks}</b><span>Target cutoff</span></div>
             </div>
           </div>
 
@@ -327,6 +381,7 @@ function TargetExamDashboard({
 
   const currentPhase = state.plan.phases[state.currentPhaseIndex];
   const gap = Math.round(state.targetCutoff - state.currentAvgAccuracy);
+  const targetCutoffMarks = Math.round((state.targetCutoff / 100) * state.totalMarks);
 
   const showWarning = state.missedDaysThisWeek >= 2;
 
@@ -377,14 +432,15 @@ function TargetExamDashboard({
                 {state.readinessStatus === "ahead" ? "✓ Ahead of pace" : state.readinessStatus === "behind" ? "⚠ Behind pace" : "On track"}
               </div>
               <div className="texReadyDesc">
-                You're averaging {state.currentAvgAccuracy}% accuracy against a {state.targetCutoff}% target.
+                You're averaging {state.currentAvgAccuracy}% accuracy against a {state.targetCutoff}% target
+                {state.totalMarks !== 100 ? ` (${targetCutoffMarks}/${state.totalMarks} marks)` : ""}.
               </div>
             </div>
           </div>
 
           <div className="texGapRow">
             <div className="texGapStat"><b>{state.currentAvgAccuracy}%</b><span>Current avg</span></div>
-            <div className="texGapStat"><b>{state.targetCutoff}%</b><span>Target cutoff</span></div>
+            <div className="texGapStat"><b>{targetCutoffMarks}/{state.totalMarks}</b><span>Target cutoff</span></div>
             <div className="texGapStat warn"><b>{gap > 0 ? `-${gap}` : `+${-gap}`}</b><span>Gap to close</span></div>
           </div>
         </div>
