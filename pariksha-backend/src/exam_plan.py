@@ -63,6 +63,30 @@ class ExamPlanOutput(BaseModel):
 LEVEL_LABEL = {"very_low": "Very low", "average": "Average", "excellent": "Excellent"}
 
 
+def _mock_guidance(days: int) -> str:
+    if days <= 10:
+        return (
+            "Exam is <=10 days away: mock tests must dominate from here on - at least 40-50% of "
+            "total study time in focusDistribution, and a FULL-LENGTH TIMED MOCK EVERY SINGLE DAY "
+            "is mandatory (say so explicitly in the relevant phase description). At this distance, "
+            "speed/accuracy under real exam conditions matters far more than learning anything new."
+        )
+    if days <= 21:
+        return (
+            "Exam is 11-21 days away: mock tests should be 30-40% of total study time, ramping up "
+            "to a daily full mock in the final phase (say so explicitly in that phase's description)."
+        )
+    if days <= 45:
+        return (
+            "Exam is 22-45 days away: mock tests should be 20-30% of total study time overall, "
+            "with the final phase explicitly moving to daily or near-daily mocks."
+        )
+    return (
+        "Exam is 45+ days away: mock tests can start lighter, around 12-20% of total study time "
+        "early on, but MUST still ramp up to daily mocks by the final phase (say so explicitly)."
+    )
+
+
 def _build_prompt(data: ExamPlanInput) -> str:
     weak_lines = "\n".join(
         f"- {t.topic}: {t.accuracy}% accuracy over {t.attempts} attempts" for t in data.weakTopics
@@ -93,6 +117,9 @@ Their current average accuracy across recent attempts: {data.currentAvgAccuracy}
 Their weakest topics right now (lowest accuracy first):
 {weak_lines}
 {starting_point_block}
+Mock test cadence for this timeline (follow this - do not default to a flat ~15% regardless of
+how close the exam is): {_mock_guidance(data.daysUntilExam)}
+
 The ONLY valid chapter names you may use in "focusTopics" (use the exact string as given, do not
 paraphrase, abbreviate, or invent a new chapter name):
 {chapters_lines}
@@ -112,8 +139,10 @@ Write a phased study plan as JSON only - no markdown fences, no commentary. Matc
 
 Rules:
 - 3-5 phases whose "weeks" sum to roughly {max(1, data.daysUntilExam // 7)} (the number of weeks
-  until the exam). The LAST phase must be light revision/mocks only, with an EMPTY focusTopics list
-  (no new topics that close to the exam).
+  until the exam). The LAST phase must be revision + mocks only, with an EMPTY focusTopics list (no
+  new topics that close to the exam), and its description must explicitly state the mock cadence
+  from the guidance above (e.g. "one full timed mock every day" when the exam is very close -
+  never describe the last phase as "light" when days remaining is small).
 - Every other phase's focusTopics must be chosen from the "valid chapter names" list above,
   weighted toward the weakest topics given - do not pick topics the student is already strong at
   except lightly in a later phase as upkeep.
@@ -121,6 +150,9 @@ Rules:
   "Quant"), must sum to 100, weighted toward whichever sections are weakest - factor in the
   starting-point self-assessment above too, not just attempt history, especially for a student
   with few or no attempts yet.
+- focusDistribution MUST include a "Mock tests" key whose share matches the mock test cadence
+  guidance given above for this exam's timeline - never default it to a small fixed number
+  regardless of days remaining. The fewer the days left, the bigger this share gets.
 - dailyHoursEstimate is a realistic number (1.5-4) given the days remaining and how far current
   accuracy is from the target cutoff - a bigger gap or fewer days means more hours/day.
 - Every phase description must reference specific real topic names, not generic advice."""
