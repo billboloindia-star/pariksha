@@ -379,7 +379,16 @@ def ingest_bank_questions(body: BankIngestRequest, email: str = Depends(require_
 
 @app.get("/bank/sections", response_model=List[BankSectionSummary])
 def bank_sections(email: str = Depends(require_premium)):
-    items = _query_all(bank_table, KeyConditionExpression=Key("userId").eq(email))
+    # Only the three small attributes needed for counting - the full items
+    # (text/options/solution/table/image) are most of each item's size, and
+    # pulling all of them across 8k+ rows is what made this endpoint take
+    # ~10s; a count-only projection cuts the transferred payload drastically.
+    items = _query_all(
+        bank_table,
+        KeyConditionExpression=Key("userId").eq(email),
+        ProjectionExpression="#sec, chapter, difficulty",
+        ExpressionAttributeNames={"#sec": "section"},
+    )
     groups: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"easy": 0, "medium": 0, "hard": 0})
     for item in items:
         key = (item.get("section", ""), item.get("chapter", ""))
