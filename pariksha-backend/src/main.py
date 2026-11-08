@@ -611,19 +611,24 @@ def bank_sections(email: str = Depends(require_premium)):
 
 
 @app.get("/bank/subconcepts", response_model=List[BankSubConceptSummary])
-def bank_subconcepts(section: str, chapter: str, email: str = Depends(require_premium)):
-    items = _query_all(
-        bank_table,
-        IndexName="BankBySectionChapterIndex",
-        KeyConditionExpression=Key("userId").eq(email) & Key("sectionChapter").eq(_section_chapter(section, chapter)),
-        ProjectionExpression="subConcept",
-    )
-    counts: dict[str, int] = defaultdict(int)
-    for item in items:
-        sc = item.get("subConcept")
-        if sc:
-            counts[sc] += 1
-    return [BankSubConceptSummary(subConcept=sc, count=n) for sc, n in sorted(counts.items())]
+def bank_subconcepts(section: str, chapters: str, email: str = Depends(require_premium)):
+    chapter_list = [c.strip() for c in chapters.split(",") if c.strip()]
+    counts: dict[tuple[str, str], int] = defaultdict(int)
+    for chapter in chapter_list:
+        items = _query_all(
+            bank_table,
+            IndexName="BankBySectionChapterIndex",
+            KeyConditionExpression=Key("userId").eq(email) & Key("sectionChapter").eq(_section_chapter(section, chapter)),
+            ProjectionExpression="subConcept",
+        )
+        for item in items:
+            sc = item.get("subConcept")
+            if sc:
+                counts[(chapter, sc)] += 1
+    return [
+        BankSubConceptSummary(chapter=chapter, subConcept=sc, count=n)
+        for (chapter, sc), n in sorted(counts.items())
+    ]
 
 
 @app.get("/bank/questions", response_model=List[BankQuestion])
@@ -660,8 +665,11 @@ def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(req
     if body.difficulty:
         pool = [q for q in pool if q.get("difficulty") == body.difficulty]
     if body.subConcepts:
+        # Each entry is "chapter|subConcept" - plain subConcept names repeat
+        # across chapters (every chapter has its own "Miscellaneous
+        # Questions"), so matching on the pair avoids cross-chapter mixups.
         wanted = set(body.subConcepts)
-        pool = [q for q in pool if q.get("subConcept") in wanted]
+        pool = [q for q in pool if f"{q.get('chapter')}|{q.get('subConcept')}" in wanted]
     if not pool:
         raise HTTPException(status_code=404, detail="No questions match that chapter/difficulty/sub-concept selection.")
 

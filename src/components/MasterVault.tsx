@@ -81,6 +81,10 @@ const CATEGORY_RULES: { label: string; test: (chapter: string) => boolean }[] = 
   { label: "Series & Coding", test: (c) => /series|alphanumeric|word & letter|machine input/i.test(c) },
 ];
 
+function subConceptKey(s: { chapter: string; subConcept: string }): string {
+  return `${s.chapter}|${s.subConcept}`;
+}
+
 function groupChapters(chapters: BankSectionSummary[]): { label: string; items: BankSectionSummary[] }[] {
   const buckets = new Map<string, BankSectionSummary[]>();
   for (const rule of CATEGORY_RULES) buckets.set(rule.label, []);
@@ -160,7 +164,7 @@ export default function MasterVault({ onLoaded, seed }: Props) {
       // an approximation when a difficulty filter is also active, but still
       // far closer than ignoring the sub-concept narrowing entirely.
       return subConceptOptions
-        .filter((s) => selectedSubConcepts.includes(s.subConcept))
+        .filter((s) => selectedSubConcepts.includes(subConceptKey(s)))
         .reduce((n, s) => n + s.count, 0);
     }
     if (!difficulty) {
@@ -181,24 +185,34 @@ export default function MasterVault({ onLoaded, seed }: Props) {
   }
 
   function toggleChapter(chapter: string) {
-    setSelectedChapters((prev) => (prev.includes(chapter) ? prev.filter((c) => c !== chapter) : [...prev, chapter]));
-    setSelectedSubConcepts([]);
+    const removing = selectedChapters.includes(chapter);
+    setSelectedChapters((prev) => (removing ? prev.filter((c) => c !== chapter) : [...prev, chapter]));
+    if (removing) {
+      // Drop only this chapter's sub-concept picks, keep the rest.
+      setSelectedSubConcepts((prev) => prev.filter((k) => !k.startsWith(`${chapter}|`)));
+    }
   }
 
-  function toggleSubConcept(name: string) {
-    setSelectedSubConcepts((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  function toggleSubConcept(key: string) {
+    setSelectedSubConcepts((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
-  // Sub-concept filtering only makes sense with exactly one chapter picked -
-  // it narrows within a single chapter's own topic breakdown, not across
-  // several at once (those don't share a sub-concept vocabulary).
   useEffect(() => {
-    if (!activeSection || selectedChapters.length !== 1) {
+    if (!activeSection || selectedChapters.length === 0) {
       setSubConceptOptions([]);
       return;
     }
-    api.fetchBankSubConcepts(activeSection, selectedChapters[0]).then(setSubConceptOptions).catch(() => setSubConceptOptions([]));
+    api.fetchBankSubConcepts(activeSection, selectedChapters).then(setSubConceptOptions).catch(() => setSubConceptOptions([]));
   }, [activeSection, selectedChapters]);
+
+  const subConceptsByChapter = useMemo(() => {
+    const groups = new Map<string, BankSubConceptSummary[]>();
+    for (const s of subConceptOptions) {
+      if (!groups.has(s.chapter)) groups.set(s.chapter, []);
+      groups.get(s.chapter)!.push(s);
+    }
+    return Array.from(groups.entries());
+  }, [subConceptOptions]);
 
   const maxCount = Math.min(count > 0 ? Math.max(count, availableForSelection || 1) : 337, Math.max(availableForSelection, 5));
   const secPerQ = count > 0 ? (duration * 60) / count : 0;
@@ -358,21 +372,31 @@ export default function MasterVault({ onLoaded, seed }: Props) {
                     : <><b>{availableForSelection.toLocaleString()} questions</b> available from {selectedChapters.length} selected chapter{selectedChapters.length === 1 ? "" : "s"}</>}
                 </p>
 
-                {subConceptOptions.length > 0 && (
+                {subConceptsByChapter.length > 0 && (
                   <div className="mvFieldRow">
                     <div className="fieldLabel" style={{ margin: 0 }}>
                       Sub-concept<span className="fieldHint">optional — narrow to specific question types</span>
                     </div>
-                    <div className="mvSubConceptRow">
-                      {subConceptOptions.map((s) => (
-                        <button
-                          key={s.subConcept}
-                          type="button"
-                          className={`mvSubConceptChip ${selectedSubConcepts.includes(s.subConcept) ? "active" : ""}`}
-                          onClick={() => toggleSubConcept(s.subConcept)}
-                        >
-                          {s.subConcept} <small>{s.count}</small>
-                        </button>
+                    <div>
+                      {subConceptsByChapter.map(([chapter, items]) => (
+                        <div key={chapter} style={{ marginBottom: 8 }}>
+                          {subConceptsByChapter.length > 1 && <div className="mvSubConceptChapterLbl">{chapter}</div>}
+                          <div className="mvSubConceptRow">
+                            {items.map((s) => {
+                              const key = subConceptKey(s);
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  className={`mvSubConceptChip ${selectedSubConcepts.includes(key) ? "active" : ""}`}
+                                  onClick={() => toggleSubConcept(key)}
+                                >
+                                  {s.subConcept} <small>{s.count}</small>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -452,7 +476,7 @@ export default function MasterVault({ onLoaded, seed }: Props) {
                 {selectedSubConcepts.length > 0 && (
                   <div className="mvSumChapters">
                     <b>{selectedSubConcepts.length} sub-concept{selectedSubConcepts.length === 1 ? "" : "s"}</b>
-                    {selectedSubConcepts.join(", ")}
+                    {selectedSubConcepts.map((k) => k.split("|")[1]).join(", ")}
                   </div>
                 )}
                 <div className="mvSumStat">{count} <span>questions</span></div>

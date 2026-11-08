@@ -218,6 +218,7 @@ class BankSectionSummary(BaseModel):
 
 
 class BankSubConceptSummary(BaseModel):
+    chapter: str
     subConcept: str
     count: int
 
