@@ -57,6 +57,7 @@ const DIFFICULTIES: { value: Difficulty | ""; label: string }[] = [
 ];
 
 const NEGATIVE_OPTIONS = [0, 0.25, 0.33, 0.5];
+const CHAPTER_DOT_COLORS = ["#6366f1", "#e8305a", "#0ea5a5", "#b5650a", "#2563eb", "#16a34a"];
 
 const CATEGORY_RULES: { label: string; test: (chapter: string) => boolean }[] = [
   { label: "Data Interpretation", test: (c) => c.startsWith("Data Interpretation") },
@@ -197,12 +198,39 @@ export default function MasterVault({ onLoaded, seed }: Props) {
     setSelectedSubConcepts((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
+  function selectAllInChapter(chapter: string, items: BankSubConceptSummary[]) {
+    const keys = items.map(subConceptKey);
+    setSelectedSubConcepts((prev) => [...prev.filter((k) => !k.startsWith(`${chapter}|`)), ...keys]);
+  }
+
+  function clearChapterSubConcepts(chapter: string) {
+    setSelectedSubConcepts((prev) => prev.filter((k) => !k.startsWith(`${chapter}|`)));
+  }
+
+  const [openChapters, setOpenChapters] = useState<Set<string>>(new Set());
+
+  function toggleChapterOpen(chapter: string) {
+    setOpenChapters((prev) => {
+      const next = new Set(prev);
+      if (next.has(chapter)) next.delete(chapter);
+      else next.add(chapter);
+      return next;
+    });
+  }
+
   useEffect(() => {
     if (!activeSection || selectedChapters.length === 0) {
       setSubConceptOptions([]);
       return;
     }
-    api.fetchBankSubConcepts(activeSection, selectedChapters).then(setSubConceptOptions).catch(() => setSubConceptOptions([]));
+    api.fetchBankSubConcepts(activeSection, selectedChapters).then((rows) => {
+      setSubConceptOptions(rows);
+      // Default to the first chapter expanded, the rest collapsed, each
+      // time the selection changes - keeps 3+ chapters from turning into
+      // an endless scroll of chips.
+      const firstChapter = rows[0]?.chapter;
+      setOpenChapters(firstChapter ? new Set([firstChapter]) : new Set());
+    }).catch(() => setSubConceptOptions([]));
   }, [activeSection, selectedChapters]);
 
   const subConceptsByChapter = useMemo(() => {
@@ -373,31 +401,61 @@ export default function MasterVault({ onLoaded, seed }: Props) {
                 </p>
 
                 {subConceptsByChapter.length > 0 && (
-                  <div className="mvFieldRow">
+                  <div className="mvFieldRow mvFieldRowBlock">
                     <div className="fieldLabel" style={{ margin: 0 }}>
                       Sub-concept<span className="fieldHint">optional — narrow to specific question types</span>
                     </div>
                     <div>
-                      {subConceptsByChapter.map(([chapter, items]) => (
-                        <div key={chapter} style={{ marginBottom: 8 }}>
-                          {subConceptsByChapter.length > 1 && <div className="mvSubConceptChapterLbl">{chapter}</div>}
-                          <div className="mvSubConceptRow">
-                            {items.map((s) => {
-                              const key = subConceptKey(s);
-                              return (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  className={`mvSubConceptChip ${selectedSubConcepts.includes(key) ? "active" : ""}`}
-                                  onClick={() => toggleSubConcept(key)}
-                                >
-                                  {s.subConcept} <small>{s.count}</small>
-                                </button>
-                              );
-                            })}
+                      {subConceptsByChapter.map(([chapter, items], i) => {
+                        const open = openChapters.has(chapter);
+                        const pickedInChapter = selectedSubConcepts.filter((k) => k.startsWith(`${chapter}|`)).length;
+                        return (
+                          <div key={chapter} className={`mvScBlock ${open ? "open" : ""}`}>
+                            <button type="button" className="mvScHead" onClick={() => toggleChapterOpen(chapter)}>
+                              <span className="mvScHeadLeft">
+                                <span className="mvScDot" style={{ background: CHAPTER_DOT_COLORS[i % CHAPTER_DOT_COLORS.length] }} />
+                                <span className="mvScName">{chapter}</span>
+                                <span className="mvScMeta">{items.length} sub-concept{items.length === 1 ? "" : "s"}</span>
+                              </span>
+                              <span className="mvScHeadRight">
+                                {pickedInChapter > 0 && <span className="mvScPill">{pickedInChapter} selected</span>}
+                                <span className="mvScChevron">▾</span>
+                              </span>
+                            </button>
+                            {open && (
+                              <div className="mvScBody">
+                                <div className="mvScAllNoneRow">
+                                  <button type="button" onClick={() => selectAllInChapter(chapter, items)}>Select all</button>
+                                  <button type="button" onClick={() => clearChapterSubConcepts(chapter)}>Clear</button>
+                                </div>
+                                <div className="mvSubConceptRow">
+                                  {items.map((s) => {
+                                    const key = subConceptKey(s);
+                                    return (
+                                      <button
+                                        key={key}
+                                        type="button"
+                                        className={`mvSubConceptChip ${selectedSubConcepts.includes(key) ? "active" : ""}`}
+                                        onClick={() => toggleSubConcept(key)}
+                                      >
+                                        {s.subConcept} <small>{s.count}</small>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
+                        );
+                      })}
+                      {selectedSubConcepts.length > 0 && (
+                        <div className="mvScClearAllRow">
+                          <span className="muted small">
+                            <b>{selectedSubConcepts.length}</b> sub-concept{selectedSubConcepts.length === 1 ? "" : "s"} selected
+                          </span>
+                          <button type="button" className="mvScClearAllBtn" onClick={() => setSelectedSubConcepts([])}>Clear all sub-concepts</button>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}
