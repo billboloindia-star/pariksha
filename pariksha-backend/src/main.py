@@ -833,15 +833,27 @@ MEANINGFUL_TOPIC_PRACTICE_COUNT = 5  # questions on a topic before it's marked d
 
 
 def _today_tasks(phase: dict, attempts_today: list) -> List[TargetExamTask]:
-    done_topics = set()
+    done_topics: dict = {}  # normalized -> original display name
     for a in attempts_today:
         for topic, tally in (a.get("byTopic") or {}).items():
             if int((tally or {}).get("att", 0)) >= MEANINGFUL_TOPIC_PRACTICE_COUNT:
-                done_topics.add(_normalize_topic(topic))
+                done_topics[_normalize_topic(topic)] = topic
+
+    focus_topics = (phase.get("focusTopics") or [])[:4]
+    focus_normalized = {_normalize_topic(t) for t in focus_topics}
+
     tasks = []
-    for topic in (phase.get("focusTopics") or [])[:4]:
+    for topic in focus_topics:
         done = _normalize_topic(topic) in done_topics
         tasks.append(TargetExamTask(topic=topic, label=f"{topic} — practice", meta="Today's focus", done=done))
+
+    # Anything practiced today beyond the fixed focus list still deserves
+    # credit on the checklist - otherwise going beyond the plan is invisible.
+    for norm, original in done_topics.items():
+        if norm in focus_normalized:
+            continue
+        tasks.append(TargetExamTask(topic=original, label=f"{original} — practice", meta="Extra practice", done=True))
+
     return tasks
 
 
