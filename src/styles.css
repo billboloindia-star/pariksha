@@ -1859,10 +1859,11 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texPlanHero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:16px;padding:28px;margin-bottom:20px}
 .texPlanEyebrow{position:relative;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:6px}
 .texPlanTitle{position:relative;font-size:22px;margin:0 0 18px}
-.texPlanStats{position:relative;display:flex;gap:28px}
+.texPlanStats{position:relative;display:flex;gap:28px;flex-wrap:wrap}
 .texPlanStat{display:flex;flex-direction:column}
 .texPlanStat b{font-family:var(--mono);font-size:22px}
 .texPlanStat span{font-size:11.5px;opacity:.7}
+.texPlanDynamicNote{position:relative;margin:10px 0 0;font-size:11.5px;opacity:.65;max-width:480px}
 
 .texCardH2{font-size:15px;margin:0 0 4px}
 .texCardSub{font-size:12.5px;color:var(--dim)}
@@ -2092,6 +2093,32 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .texAdaptItem b{font-size:13px}
 .texAdaptItem p{font-size:12px;color:var(--dim);margin:3px 0}
 .texAdaptDate{font-size:10.5px;color:var(--grey)}
+
+.texQOverallRow{display:flex;gap:28px;flex-wrap:wrap;margin:14px 0}
+.texQStat{display:flex;flex-direction:column}
+.texQStat b{font-family:var(--mono);font-size:20px}
+.texQStatSuffix{font-size:13px;opacity:.6;margin-left:3px;font-weight:400}
+.texQStat span{font-size:11px;opacity:.65}
+
+.texQBreakdown{margin-top:18px}
+.texQBreakdown h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;opacity:.6;margin:0 0 10px}
+.texQRow{display:grid;grid-template-columns:1.6fr .8fr .7fr .8fr .9fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.texQRowLabel{font-size:12.5px;font-weight:700;display:flex;flex-direction:column}
+.texQRowSection{font-size:10px;font-weight:400;opacity:.55}
+.texQRowStat{font-size:12px;font-variant-numeric:tabular-nums;opacity:.85}
+
+.texConsistRow{margin-bottom:16px}
+.texConsistRow:last-child{margin-bottom:0}
+.texConsistHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.texConsistSection{font-weight:800;font-size:13px}
+.texConsistNums{font-size:11.5px;opacity:.7;font-variant-numeric:tabular-nums}
+.texConsistMsg{font-size:12px;margin:6px 0 0;opacity:.75}
+.texConsistMsg.warn{color:#e8305a;opacity:1;font-weight:600}
+
+.texDashDark .texQRow{border-top-color:#1c2d45}
+.texDashDark .texQRowSection{color:#5c7191}
+.texDashDark .texConsistMsg{color:#8296b3}
+.texDashDark .texConsistMsg.warn{color:#ff7a95}
 
 .texRefreshRow{display:flex;justify-content:flex-end}
 

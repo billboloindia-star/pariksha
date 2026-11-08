@@ -2,6 +2,7 @@
 
 import base64
 import json
+import math
 import random
 import re
 import time
@@ -51,6 +52,11 @@ from src.models import (
     TargetExamPhase,
     TargetExamPlan,
     TargetExamState,
+    TodayProgress,
+    QuestionProgress,
+    SectionQuestionProgress,
+    TopicQuestionProgress,
+    SectionAttemptInsight,
     TopicContractBucket,
     TopicContractChapter,
     TopicContractSection,
@@ -839,6 +845,186 @@ def _today_tasks(phase: dict, attempts_today: list) -> List[TargetExamTask]:
     return tasks
 
 
+DAILY_QUESTIONS_PER_STUDY_HOUR = 15  # heuristic pace used only to size the daily target
+
+
+def _daily_question_target(daily_hours: float) -> int:
+    return max(40, min(150, round(float(daily_hours or 2) * DAILY_QUESTIONS_PER_STUDY_HOUR)))
+
+
+def _mocks_per_week(days_left: int) -> float:
+    """Mirrors the day-bucket boundaries _mock_guidance() uses to brief
+    Gemini on mock cadence, but as a plain number instead of prose -
+    recalculated fresh every time from the CURRENT days-left, so it's a
+    live, moving target, not a one-time figure frozen at plan generation."""
+    if days_left <= 10:
+        return 7.0
+    if days_left <= 21:
+        return 5.0
+    if days_left <= 45:
+        return 3.0
+    return 1.5
+
+
+def _today_progress(attempts_today: list, plan: dict, chapter_to_section: dict, current_phase: dict) -> TodayProgress:
+    """Today's solved/accuracy/time, overall -> section -> topic, built from
+    every attempt logged today regardless of whether it came from a mock
+    paper or a custom Master Vault practice session - both write the same
+    attempt shape, so neither needs special-casing. Per-topic/section time
+    isn't tracked at that granularity on the attempt record, so each
+    attempt's total time is allocated across its topics in proportion to
+    how many questions of each topic it covered (an approximation, not a
+    precise per-question timer)."""
+    topic_agg: dict = defaultdict(lambda: {"ok": 0, "att": 0, "secs": 0.0})
+    overall_solved = 0
+    overall_correct = 0
+    overall_secs = 0.0
+    for a in attempts_today:
+        attempted = _attempted_count(a)
+        correct = int(a.get("correct", 0))
+        secs = float(a.get("secs", 0))
+        overall_solved += attempted
+        overall_correct += correct
+        overall_secs += secs
+        by_topic = a.get("byTopic") or {}
+        total_att_in_attempt = sum(int(t.get("att", 0)) for t in by_topic.values())
+        for topic, tally in by_topic.items():
+            att = int(tally.get("att", 0))
+            topic_agg[topic]["att"] += att
+            topic_agg[topic]["ok"] += int(tally.get("ok", 0))
+            if total_att_in_attempt:
+                topic_agg[topic]["secs"] += secs * (att / total_att_in_attempt)
+
+    dist = plan.get("focusDistribution") or {}
+    daily_hours = float(plan.get("dailyHoursEstimate") or 2)
+    overall_target = max(40, min(150, round(daily_hours * DAILY_QUESTIONS_PER_STUDY_HOUR)))
+
+    sections = list(dist.keys()) or sorted({chapter_to_section.get(t, "Other") for t in topic_agg})
+    total_weight = sum(dist.values()) or 1.0
+    section_targets = {
+        sec: round(overall_target * dist.get(sec, 1.0 / max(1, len(sections))) / total_weight)
+        for sec in sections
+    }
+
+    section_agg: dict = defaultdict(lambda: {"ok": 0, "att": 0, "secs": 0.0})
+    for topic, v in topic_agg.items():
+        sec = chapter_to_section.get(topic, "Other")
+        section_agg[sec]["ok"] += v["ok"]
+        section_agg[sec]["att"] += v["att"]
+        section_agg[sec]["secs"] += v["secs"]
+
+    by_section = []
+    for sec, v in section_agg.items():
+        target = section_targets.get(sec, 0)
+        solved = v["att"]
+        by_section.append(SectionQuestionProgress(
+            section=sec, target=target, solved=solved, correct=v["ok"],
+            accuracy=round(v["ok"] / solved * 100, 1) if solved else 0.0,
+            remaining=max(0, target - solved),
+            avgTimeSec=round(v["secs"] / solved, 1) if solved else 0.0,
+        ))
+    by_section.sort(key=lambda s: s.section)
+
+    focus_topics = (current_phase.get("focusTopics") or [])
+    focus_by_section: dict = defaultdict(list)
+    for t in focus_topics:
+        focus_by_section[chapter_to_section.get(t, "Other")].append(t)
+    topic_targets = {
+        t: max(1, round(section_targets.get(sec, 0) / len(topics)))
+        for sec, topics in focus_by_section.items() for t in topics
+    }
+
+    by_topic = []
+    seen_topics = set()
+    for topic, v in topic_agg.items():
+        seen_topics.add(topic)
+        sec = chapter_to_section.get(topic, "Other")
+        target = topic_targets.get(topic, 0)
+        solved = v["att"]
+        by_topic.append(TopicQuestionProgress(
+            topic=topic, section=sec, target=target, solved=solved, correct=v["ok"],
+            accuracy=round(v["ok"] / solved * 100, 1) if solved else 0.0,
+            remaining=max(0, target - solved),
+            avgTimeSec=round(v["secs"] / solved, 1) if solved else 0.0,
+        ))
+    for t in focus_topics:
+        if t in seen_topics:
+            continue
+        target = topic_targets.get(t, 0)
+        by_topic.append(TopicQuestionProgress(
+            topic=t, section=chapter_to_section.get(t, "Other"), target=target,
+            solved=0, correct=0, accuracy=0.0, remaining=target, avgTimeSec=0.0,
+        ))
+    by_topic.sort(key=lambda t: (-t.target, t.topic))
+
+    overall = QuestionProgress(
+        target=overall_target, solved=overall_solved, correct=overall_correct,
+        accuracy=round(overall_correct / overall_solved * 100, 1) if overall_solved else 0.0,
+        remaining=max(0, overall_target - overall_solved),
+        avgTimeSec=round(overall_secs / overall_solved, 1) if overall_solved else 0.0,
+    )
+    return TodayProgress(overall=overall, bySection=by_section, byTopic=by_topic)
+
+
+DEFAULT_SECTION_ACCURACY_ASSUMPTION = 0.75  # used only when a section has no attempt history yet
+MIN_ACCURACY_FLOOR = 0.3  # prevents a near-zero accuracy from exploding the required-attempts estimate
+SHORTFALL_THRESHOLD = 0.85  # avgAttempts below this fraction of requiredAttempts counts as "falling short"
+
+
+def _section_attempt_consistency(
+    attempts: list, plan: dict, chapter_to_section: dict, target_cutoff: float, total_marks: float,
+) -> List[SectionAttemptInsight]:
+    """Per section: how many questions you'd need to attempt, on average
+    across your own recent meaningfully-completed attempts, to realistically
+    hit your target cutoff at your own current accuracy in that section -
+    versus what you're actually averaging. This is a volume check, separate
+    from accuracy: you can be accurate on everything you attempt and still
+    be short of your cutoff if you're simply not attempting enough."""
+    meaningful = [a for a in attempts if _is_meaningful_attempt(a)]
+    dist = plan.get("focusDistribution") or {}
+    target_cutoff_marks = (target_cutoff / 100.0) * total_marks
+
+    per_section_counts: dict = defaultdict(list)
+    per_section_ok = defaultdict(int)
+    per_section_att = defaultdict(int)
+    for a in meaningful:
+        sec_att_this: dict = defaultdict(int)
+        sec_ok_this: dict = defaultdict(int)
+        for topic, tally in (a.get("byTopic") or {}).items():
+            sec = chapter_to_section.get(topic, "Other")
+            sec_att_this[sec] += int(tally.get("att", 0))
+            sec_ok_this[sec] += int(tally.get("ok", 0))
+        for sec, att in sec_att_this.items():
+            per_section_counts[sec].append(att)
+            per_section_att[sec] += att
+            per_section_ok[sec] += sec_ok_this[sec]
+
+    total_weight = sum(dist.values()) or 1.0
+    insights = []
+    for sec, weight in dist.items():
+        required_correct = target_cutoff_marks * (weight / total_weight)
+        have_data = per_section_att.get(sec, 0) > 0
+        accuracy = (per_section_ok[sec] / per_section_att[sec]) if have_data else DEFAULT_SECTION_ACCURACY_ASSUMPTION
+        accuracy = max(MIN_ACCURACY_FLOOR, accuracy)
+        required_attempts = max(1, math.ceil(required_correct / accuracy))
+
+        counts = per_section_counts.get(sec, [])
+        avg_attempts = round(sum(counts) / len(counts), 1) if counts else 0.0
+        is_short = bool(counts) and avg_attempts < required_attempts * SHORTFALL_THRESHOLD
+
+        message = None
+        if not counts:
+            message = f"No {sec} attempts yet — can't tell if your attempt volume is on track."
+        elif is_short:
+            message = f"Attempts aren't up to mark in {sec} — you need to attempt ~{required_attempts} to hit your target, but you're averaging only {avg_attempts}."
+        insights.append(SectionAttemptInsight(
+            section=sec, requiredAttempts=required_attempts, avgAttempts=avg_attempts,
+            isShort=is_short, message=message,
+        ))
+    insights.sort(key=lambda i: (not i.isShort, i.section))
+    return insights
+
+
 def _readiness(current_avg: float, target_cutoff: float, accepted_at_ms: int, exam_date_ms: int) -> tuple:
     """Combines two signals: the accuracy gap right now (positive = behind
     target), and time pressure - the same gap matters more as the exam gets
@@ -935,6 +1121,12 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
     today_str = _day_str(int(time.time() * 1000))
     attempts_today = [a for a in attempts if _day_str(int(a.get("when", 0))) == today_str]
     today_tasks = _today_tasks(current_phase, attempts_today)
+    chapter_to_section = {c: sec for sec, chs in _bank_chapters_by_section(email).items() for c in chs}
+    today_progress = _today_progress(attempts_today, plan, chapter_to_section, current_phase)
+    attempt_consistency = _section_attempt_consistency(
+        attempts, plan, chapter_to_section, float(item["targetCutoff"]), float(item.get("totalMarks", 100)),
+    )
+    recommended_mocks_per_week = _mocks_per_week(days_left)
 
     adaptive_log = [AdaptiveLogEntry(**e) for e in item.get("adaptiveLog", [])]
     before = len(adaptive_log)
@@ -954,7 +1146,8 @@ def _target_exam_state(email: str, item: dict) -> TargetExamState:
         adaptiveLog=adaptive_log,
         daysLeft=days_left, currentAvgAccuracy=current_avg, readiness=readiness, readinessStatus=status,
         streak=streak, currentPhaseIndex=phase_idx, todayTasks=today_tasks, calendar=calendar,
-        missedDaysThisWeek=missed_week,
+        missedDaysThisWeek=missed_week, todayProgress=today_progress, attemptConsistency=attempt_consistency,
+        recommendedMocksThisWeek=recommended_mocks_per_week,
     )
 
 
@@ -1013,6 +1206,8 @@ def generate_target_exam_plan(body: TargetExamGenerateRequest, email: str = Depe
     return TargetExamPlan(
         phases=phases, focusDistribution=out.focusDistribution, dailyHoursEstimate=out.dailyHoursEstimate,
         topicContract=topic_contract,
+        dailyQuestionTarget=_daily_question_target(out.dailyHoursEstimate),
+        mocksPerWeek=_mocks_per_week(days_until),
     )
 
 

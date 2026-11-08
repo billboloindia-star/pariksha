@@ -227,6 +227,11 @@ class TargetExamPlan(BaseModel):
     # see src/topic_contract.py. Empty for sections/exams it couldn't compute
     # one for (falls back to the AI's own judgment there).
     topicContract: List[TopicContractSection] = []
+    # Snapshot estimate at generation time, shown in the contract review
+    # before accepting - the dashboard (TargetExamState below) recalculates
+    # the live versions of both on every read instead of trusting this.
+    dailyQuestionTarget: int = 0
+    mocksPerWeek: float = 0
 
 
 class SectionConfidence(BaseModel):
@@ -280,6 +285,48 @@ class CalendarDay(BaseModel):
     level: str  # "0" | "1" | "2" | "3" | "miss"
 
 
+class QuestionProgress(BaseModel):
+    """Today's solved/accuracy/time against a daily question target, at
+    whatever granularity (overall / a section / a topic). Pulled from every
+    attempt logged today regardless of source - a custom Master Vault
+    practice session and a full mock paper both write the same attempt
+    record, so both count here without any special-casing."""
+    target: int
+    solved: int
+    correct: int
+    accuracy: float
+    remaining: int
+    avgTimeSec: float
+
+
+class SectionQuestionProgress(QuestionProgress):
+    section: str
+
+
+class TopicQuestionProgress(QuestionProgress):
+    topic: str
+    section: str
+
+
+class TodayProgress(BaseModel):
+    overall: QuestionProgress
+    bySection: List[SectionQuestionProgress]
+    byTopic: List[TopicQuestionProgress]
+
+
+class SectionAttemptInsight(BaseModel):
+    """Not a single-day number - how many questions you'd need to actually
+    attempt per section, on average across recent mocks/practice, to have a
+    realistic shot at your target cutoff at your own current accuracy. Flags
+    when your real attempt volume is falling short of that, regardless of
+    how accurate you are on what you do attempt."""
+    section: str
+    requiredAttempts: int
+    avgAttempts: float
+    isShort: bool
+    message: Optional[str] = None
+
+
 class TargetExamState(BaseModel):
     exam: str
     stage: str
@@ -301,6 +348,11 @@ class TargetExamState(BaseModel):
     todayTasks: List[TargetExamTask]
     calendar: List[CalendarDay]
     missedDaysThisWeek: int
+    todayProgress: TodayProgress
+    attemptConsistency: List[SectionAttemptInsight] = []
+    # Recalculated fresh on every read from the CURRENT days-left and pace -
+    # not the frozen generation-time snapshot on plan.dailyQuestionTarget.
+    recommendedMocksThisWeek: float = 0
 
 
 class TopicResolveRequest(BaseModel):

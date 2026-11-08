@@ -684,7 +684,10 @@ export default function TargetExam({ onPracticeTopic }: Props) {
               <div className="texPlanStat"><b>{Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000))}</b><span>Days left</span></div>
               <div className="texPlanStat"><b>~{generatedPlan.dailyHoursEstimate}h</b><span>Daily target</span></div>
               <div className="texPlanStat"><b>{cutoffMarks}/{totalMarks}</b><span>Target cutoff</span></div>
+              <div className="texPlanStat"><b>{generatedPlan.dailyQuestionTarget}</b><span>Questions/day</span></div>
+              <div className="texPlanStat"><b>{generatedPlan.mocksPerWeek}</b><span>Mocks/week</span></div>
             </div>
+            <p className="texPlanDynamicNote">These two scale as your exam gets closer and recalculate live on your dashboard once you start — not fixed numbers.</p>
           </div>
 
           <div className={generatedPlan.topicContract?.length ? "texContractShell" : "texCard"}>
@@ -831,6 +834,15 @@ export default function TargetExam({ onPracticeTopic }: Props) {
 
 function readinessColor(status: TargetExamState["readinessStatus"]): string {
   return status === "ahead" ? "#4fd18b" : status === "behind" ? "#ffb0b0" : "#ffd98a";
+}
+
+function QProgressStat({ label, value, suffix }: { label: string; value: string | number; suffix?: string }) {
+  return (
+    <div className="texQStat">
+      <b>{value}{suffix ? <span className="texQStatSuffix">{suffix}</span> : null}</b>
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function DashboardTooltip({ label }: { label: string }) {
@@ -988,6 +1000,74 @@ function TargetExamDashboard({
             <div className="texCalStat"><b style={{ color: "var(--red)" }}>{state.missedDaysThisWeek}</b><span>Missed this week</span></div>
           </div>
         </div>
+      </div>
+
+      <div className="card texQProgressCard">
+        <div className="texCardHead">
+          <span className="texCardTitle">🎯 Today's question progress</span>
+          <span className="texCardSub">counts every attempt today — mock or custom practice</span>
+        </div>
+
+        <div className="texQOverallRow">
+          <QProgressStat label="Solved" value={state.todayProgress.overall.solved} suffix={`/ ${state.todayProgress.overall.target}`} />
+          <QProgressStat label="Accuracy" value={`${state.todayProgress.overall.accuracy}%`} />
+          <QProgressStat label="Left" value={state.todayProgress.overall.remaining} />
+          <QProgressStat label="Avg time" value={state.todayProgress.overall.avgTimeSec ? `${state.todayProgress.overall.avgTimeSec}s` : "—"} />
+        </div>
+        <div className="texTaskProgressTrack"><span className="texTaskProgressFill" style={{ width: `${Math.min(100, (state.todayProgress.overall.solved / Math.max(1, state.todayProgress.overall.target)) * 100)}%` }} /></div>
+
+        {state.todayProgress.bySection.length > 0 && (
+          <div className="texQBreakdown">
+            <h3>By section</h3>
+            {state.todayProgress.bySection.map((s) => (
+              <div className="texQRow" key={s.section}>
+                <span className="texQRowLabel">{s.section}</span>
+                <span className="texQRowStat">{s.solved}/{s.target}</span>
+                <span className="texQRowStat">{s.accuracy}%</span>
+                <span className="texQRowStat">{s.remaining} left</span>
+                <span className="texQRowStat">{s.avgTimeSec ? `${s.avgTimeSec}s avg` : "—"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {state.todayProgress.byTopic.length > 0 && (
+          <div className="texQBreakdown">
+            <h3>By topic</h3>
+            {state.todayProgress.byTopic.map((t) => (
+              <div className="texQRow" key={t.topic}>
+                <span className="texQRowLabel">{t.topic}<span className="texQRowSection">{t.section}</span></span>
+                <span className="texQRowStat">{t.solved}{t.target ? `/${t.target}` : ""}</span>
+                <span className="texQRowStat">{t.solved ? `${t.accuracy}%` : "—"}</span>
+                <span className="texQRowStat">{t.target ? `${t.remaining} left` : ""}</span>
+                <span className="texQRowStat">{t.avgTimeSec ? `${t.avgTimeSec}s avg` : "—"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card texConsistCard">
+        <div className="texCardHead">
+          <span className="texCardTitle">📊 Attempt consistency</span>
+          <span className="texCardSub">{state.recommendedMocksThisWeek} mocks/week recommended at {state.daysLeft} days left</span>
+        </div>
+        {state.attemptConsistency.length === 0 ? (
+          <p className="muted small">No section data yet.</p>
+        ) : (
+          state.attemptConsistency.map((c) => (
+            <div className={`texConsistRow ${c.isShort ? "short" : ""}`} key={c.section}>
+              <div className="texConsistHead">
+                <span className="texConsistSection">{c.section}</span>
+                <span className="texConsistNums">{c.avgAttempts} / {c.requiredAttempts} attempted avg</span>
+              </div>
+              <div className="texTaskProgressTrack">
+                <span className="texTaskProgressFill" style={{ width: `${Math.min(100, (c.avgAttempts / Math.max(1, c.requiredAttempts)) * 100)}%`, background: c.isShort ? "#e8305a" : undefined }} />
+              </div>
+              {c.message && <p className={`texConsistMsg ${c.isShort ? "warn" : ""}`}>{c.message}</p>}
+            </div>
+          ))
+        )}
       </div>
 
       <div className="texMainGrid">
