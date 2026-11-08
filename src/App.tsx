@@ -15,14 +15,15 @@ import MasterVault from "./components/MasterVault";
 import Profile from "./components/Profile";
 import SpeedMaths from "./components/SpeedMaths";
 import TargetExam from "./components/TargetExam";
+import StudyVault from "./components/StudyVault";
 import * as api from "../shared/api";
 import type { ExamResult, ExamSettings } from "../shared/types";
 import type { Paper } from "../shared/types";
 import { clearInProgress, loadInProgress } from "../shared/examPersist";
 import type { ExamProgress } from "../shared/examPersist";
 
-type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam";
-const HUB_PHASES: Phase[] = ["home", "progress", "library", "vault", "profile", "speedmaths", "targetexam"];
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault";
+const HUB_PHASES: Phase[] = ["home", "progress", "library", "vault", "profile", "speedmaths", "targetexam", "studyvault"];
 
 const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false, examCenterSkin: false };
 
@@ -104,6 +105,7 @@ export default function App() {
           {phase === "profile" && session && <Profile session={session} onSessionChange={onSessionChange} onLogout={onLogout} />}
           {phase === "speedmaths" && api.canUseBankFeature(session) && <SpeedMaths />}
           {phase === "targetexam" && api.canUseBankFeature(session) && <TargetExam onPracticeTopic={onPracticeTopic} />}
+          {phase === "studyvault" && api.canUseBankFeature(session) && <StudyVault />}
         </HubLayout>
       )}
       {phase === "login" && (

@@ -1621,27 +1621,35 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .smStartBtn{width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#e8305a,#c91c46);color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 16px 30px -14px rgba(201,28,70,.55)}
 .smStartBtn:disabled{opacity:.5;cursor:not-allowed}
 
-.smModeRow{display:flex;gap:8px;margin-bottom:18px}
+.smModeRow{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
 .smModeBtn{flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--line-2);background:var(--soft);color:var(--dim);font-weight:800;font-size:13.5px;cursor:pointer}
 .smModeBtn.active{background:#111827;border-color:#111827;color:#fff}
+.smModeBtn.smRefTab{flex:0 0 auto;padding:9px 16px;border-radius:999px;font-size:12.5px}
 
-.smRefToggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;margin:0 0 14px;cursor:pointer;text-align:left}
-.smRefToggle h2{margin:0}
-.smRefToggle span{font-size:20px;font-weight:800;color:var(--dim)}
-.smRefBody{margin-top:-6px}
+.smRefStage{background:linear-gradient(165deg,#0b1626,#081222 92%);border-radius:24px;padding:32px 28px;color:#fff;text-align:center;position:relative;overflow:hidden}
+.smRefGlow{position:absolute;width:380px;height:380px;border-radius:50%;filter:blur(60px);opacity:.2;pointer-events:none;background:#e8305a;top:-180px;right:-140px}
 
-.smRefTableList{display:flex;flex-direction:column;gap:6px;max-height:460px;overflow-y:auto}
-.smRefTableRow{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:var(--soft)}
-.smRefTableN{flex:0 0 28px;font-weight:800;font-size:14px;color:#e8305a}
-.smRefTableValues{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.smRefPickRow{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px}
+.smRefPickArrow{width:34px;height:34px;border-radius:50%;border:1.5px solid #263a55;background:#0e1c30;color:#fff;font-size:15px;cursor:pointer;flex:0 0 auto}
+.smRefPickStrip{display:flex;gap:6px;overflow-x:auto;max-width:420px;padding:4px 180px;scroll-behavior:smooth}
+.smRefPickStrip::-webkit-scrollbar{display:none}
+.smRefPickChip{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:12px;color:#8296b3;background:none;border:none;cursor:pointer}
+.smRefPickChip.active{background:linear-gradient(135deg,#e8305a,#c91c46);color:#fff}
 
-.smRefGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
-.smRefChip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
-.smRefChip b{font-size:12.5px;color:var(--dim)}
-.smRefChip span{font-size:13px;font-weight:800}
+.smRefBigAnswer{position:relative;margin-bottom:4px}
+.smRefEq{font-family:var(--mono);font-size:18px;color:#8296b3;margin-bottom:4px}
+.smRefEq.noVal{font-size:22px;color:#fff;margin-bottom:0}
+.smRefVal{font-family:var(--mono);font-size:56px;font-weight:800;line-height:1}
 
-.smRefFracGroups{display:flex;flex-direction:column;gap:16px;max-height:460px;overflow-y:auto}
-.smRefFracDen{font-size:12.5px;font-weight:800;color:#e8305a;margin-bottom:8px}
+.smRefMiniList{position:relative;margin-top:26px;display:flex;flex-direction:column;max-width:340px;margin-left:auto;margin-right:auto;text-align:left;max-height:360px;overflow-y:auto}
+.smRefMiniRow{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #1c2d45;font-family:var(--mono);font-size:13px}
+.smRefMiniRow:last-child{border-bottom:none}
+.smRefMiniRow b{color:#fff}
+.smRefMiniRow span{color:#8296b3}
+.smRefMiniRow.current{background:rgba(232,48,90,.14);border-radius:8px;margin:0 -8px;padding:8px 8px}
+.smRefMiniRow.current b,.smRefMiniRow.current span{color:#fff;font-weight:800}
+
+.smRefHint{position:relative;font-size:11px;color:#5c7191;margin-top:20px}
 
 .smDrillPage{max-width:560px}
 .smDrillTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--dim)}
@@ -2176,3 +2184,66 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .pgCandidateSection{font-weight:600;color:var(--dim)}
 .pgResolveManualBtn{width:100%;background:none;border:none;color:var(--dim);font-size:12px;font-weight:700;padding:8px;cursor:pointer;font-family:var(--font);text-decoration:underline;text-underline-offset:3px}
 .pgResolveManualBtn:hover{color:var(--purple)}
+
+/* ---------- Study Vault ---------- */
+.svPage{max-width:1020px;margin:0 auto;padding:28px 28px 60px}
+.svEyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:800;text-align:center;margin-bottom:6px}
+.svTitle{font-size:26px;text-align:center;margin:0 0 8px;letter-spacing:-.02em}
+.svSub{text-align:center;color:var(--dim);font-size:13.5px;margin:0 0 26px}
+
+.svGroupLabel{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#5c7191;text-align:center;margin:18px 0 8px}
+.svGroupLabel:first-of-type{margin-top:0}
+.svChapterRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:6px}
+.svChapterBtn{padding:9px 16px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--dim);font-weight:700;font-size:12.5px;cursor:pointer}
+.svChapterBtn.active{background:#111827;border-color:#111827;color:#fff}
+.svChapterBtn.speedmaths.active{background:linear-gradient(135deg,#e8305a,#c91c46);border-color:transparent}
+
+.svStage{background:linear-gradient(165deg,#0b1626,#081222 92%);border-radius:24px;padding:36px 40px;color:#fff;position:relative;overflow:hidden;margin-top:20px}
+
+.svChHead{position:relative;margin-bottom:20px}
+.svChHead h2{margin:0 0 6px;font-size:20px}
+.svChHead p{margin:0;font-size:13px;color:#8296b3;line-height:1.6;max-width:640px}
+
+.svConceptBox{position:relative;background:linear-gradient(135deg,rgba(63,165,255,.14),rgba(63,165,255,.05));border:1px solid rgba(63,165,255,.3);border-radius:14px;padding:16px 20px;margin-bottom:18px}
+.svConceptLbl{font-size:11px;font-weight:800;color:#3fa5ff;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.svConceptTitle{font-size:14px;font-weight:800;margin-bottom:6px}
+.svConceptBody{font-size:12.5px;color:#8296b3;line-height:1.7}
+
+.svFormulaList{position:relative;display:flex;flex-direction:column;gap:12px}
+.svFormulaCard{background:#0e1c30;border:1px solid #263a55;border-radius:14px;padding:16px 20px}
+.svFname{font-size:12.5px;font-weight:800;color:#8296b3;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
+.svFeq{font-family:var(--mono);font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;line-height:1.6}
+.svFnote{font-size:12px;color:#8296b3;line-height:1.6}
+
+.svExampleBox{position:relative;margin-top:22px;background:#0e1c30;border:1px solid #263a55;border-radius:14px;padding:18px 22px}
+.svElbl{font-size:11.5px;font-weight:800;color:#e8305a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+.svEwork{font-family:var(--mono);font-size:13px;color:#8296b3;line-height:2}
+.svEwork b{color:#fff}
+
+/* embedded Speed Maths shortcuts */
+.svSubTabRow{position:relative;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+.svSubTabBtn{padding:9px 16px;border-radius:999px;border:1.5px solid #263a55;background:#0e1c30;color:#8296b3;font-weight:700;font-size:12.5px;cursor:pointer}
+.svSubTabBtn.active{background:linear-gradient(135deg,#e8305a,#c91c46);border-color:transparent;color:#fff}
+.svShortcutHead{position:relative;text-align:left;max-width:560px;margin:0 auto 22px}
+.svShortcutHead h3{margin:0 0 4px;font-size:16px}
+.svShortcutHead p{margin:0;font-size:12.5px;color:#8296b3;line-height:1.6}
+.svDigitRow{position:relative;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+.svDigitChip{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;color:#8296b3;background:#0e1c30;border:1px solid #263a55;cursor:pointer}
+.svDigitChip.active{background:linear-gradient(135deg,#e8305a,#c91c46);border-color:transparent;color:#fff}
+.svDigitChip.impossible{opacity:.4}
+.svRuleOut{position:relative;background:#0e1c30;border:1px solid #263a55;border-radius:14px;padding:18px 22px;max-width:520px;margin:0 auto;text-align:left}
+.svHeadline{font-family:var(--mono);font-size:16px;font-weight:800;margin-bottom:10px}
+.svArrow{color:#8296b3;font-weight:400;margin:0 6px}
+.svSteps{font-size:12.5px;color:#8296b3;line-height:2;font-family:var(--mono)}
+.svHl{color:#e8305a;font-weight:700}
+.svWin{color:#fff;font-weight:800}
+.svTrickNote{position:relative;font-size:12.5px;color:#8296b3;line-height:1.7;margin:0 0 14px;text-align:left;max-width:520px;margin-left:auto;margin-right:auto}
+.svTrickNote b{color:#fff}
+.svWorkEx{position:relative;background:#0e1c30;border:1px solid #263a55;border-radius:12px;padding:16px 20px;font-family:var(--mono);font-size:13px;line-height:2;color:#8296b3;max-width:520px;margin:0 auto;text-align:left}
+.svWorkEx b{color:#fff}
+.svStep{color:#e8305a;font-weight:700}
+.svLandmarkBlock{position:relative;max-width:520px;margin:18px auto 0;text-align:left}
+.svLandmarkLbl{font-size:11.5px;color:#5c7191;margin-bottom:8px}
+.svLandmarkRow{display:flex;gap:8px;flex-wrap:wrap}
+.svLandmarkChip{background:#0e1c30;border:1px solid #263a55;border-radius:9px;padding:7px 10px;font-family:var(--mono);font-size:11.5px;color:#8296b3}
+.svLandmarkChip b{color:#fff}

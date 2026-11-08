@@ -6,8 +6,6 @@ import {
   checkSpeedMathAnswer,
   summarizeSpeedMathSession,
   getTableRow,
-  getSquaresList,
-  getCubesList,
   FRACTION_TABLE,
   type SpeedMathType,
   type SpeedMathQuestion,
@@ -22,78 +20,122 @@ type Mode = "drill" | "reference";
 const COUNT_OPTIONS = [10, 20, 30, 50];
 const DURATION_OPTIONS = [2, 5, 10];
 
-function ReferenceCharts() {
-  const [open, setOpen] = useState<string | null>("tables");
-  const squares = getSquaresList(50);
-  const cubes = getCubesList(30);
-  const fracByDen = new Map<number, typeof FRACTION_TABLE>();
-  for (const f of FRACTION_TABLE) {
-    if (!fracByDen.has(f.den)) fracByDen.set(f.den, []);
-    fracByDen.get(f.den)!.push(f);
-  }
+type RefMode = "tables" | "squares" | "cubes" | "sqrt" | "cbrt" | "fractions";
 
-  function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
-    const isOpen = open === id;
-    return (
-      <div className="smCard">
-        <button className="smRefToggle" onClick={() => setOpen(isOpen ? null : id)}>
-          <h2>{title}</h2>
-          <span>{isOpen ? "−" : "+"}</span>
-        </button>
-        {isOpen && <div className="smRefBody">{children}</div>}
-      </div>
-    );
+const REF_TAB_ORDER: RefMode[] = ["tables", "squares", "cubes", "sqrt", "cbrt", "fractions"];
+const REF_TAB_LABELS: Record<RefMode, string> = {
+  tables: "Tables", squares: "Squares", cubes: "Cubes", sqrt: "Square Root", cbrt: "Cube Root", fractions: "Fractions",
+};
+const REF_START: Record<RefMode, number> = { tables: 7, squares: 12, cubes: 7, sqrt: 12, cbrt: 7, fractions: 2 };
+const REF_MAX: Record<RefMode, number> = { tables: 25, squares: 50, cubes: 30, sqrt: 50, cbrt: 30, fractions: 20 };
+const REF_MIN: Record<RefMode, number> = { tables: 1, squares: 1, cubes: 1, sqrt: 1, cbrt: 1, fractions: 2 };
+
+interface RefRow { l: string; r: string | number; hi?: boolean }
+
+function refRows(mode: RefMode, n: number): RefRow[] {
+  if (mode === "tables") return getTableRow(n).map((r) => ({ l: `${n} × ${r.multiple}`, r: r.product }));
+  if (mode === "fractions") {
+    return FRACTION_TABLE.filter((f) => f.den === n).map((f) => ({ l: `${f.num}/${f.den}`, r: `${f.truncPct.toFixed(2)}%` }));
   }
+  const max = mode === "cubes" || mode === "cbrt" ? 30 : 50;
+  const out: RefRow[] = [];
+  for (let k = Math.max(1, n - 3); k <= Math.min(max, n + 3); k++) {
+    if (mode === "squares") out.push({ l: `${k}²`, r: k * k, hi: k === n });
+    else if (mode === "cubes") out.push({ l: `${k}³`, r: k * k * k, hi: k === n });
+    else if (mode === "sqrt") out.push({ l: `√${k * k}`, r: k, hi: k === n });
+    else if (mode === "cbrt") out.push({ l: `∛${k * k * k}`, r: k, hi: k === n });
+  }
+  return out;
+}
+
+function refLabel(mode: RefMode, n: number): string {
+  if (mode === "tables") return `Table of ${n}`;
+  if (mode === "fractions") return `Denominator ${n}`;
+  if (mode === "squares") return `${n}²`;
+  if (mode === "cubes") return `${n}³`;
+  if (mode === "sqrt") return `√${n * n} = ?`;
+  return `∛${n * n * n} = ?`;
+}
+
+function refBig(mode: RefMode, n: number): string {
+  if (mode === "tables" || mode === "fractions") return "";
+  if (mode === "squares") return `${n * n}`;
+  if (mode === "cubes") return `${n * n * n}`;
+  return `${n}`;
+}
+
+function ReferenceStage() {
+  const [mode, setMode] = useState<RefMode>("tables");
+  const [current, setCurrent] = useState(7);
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const active = stripRef.current?.querySelector(".active");
+    active?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [mode, current]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") setCurrent((c) => Math.max(REF_MIN[mode], c - 1));
+      if (e.key === "ArrowRight") setCurrent((c) => Math.min(REF_MAX[mode], c + 1));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode]);
+
+  const rows = refRows(mode, current);
+  const big = refBig(mode, current);
+  const values = mode === "fractions"
+    ? Array.from({ length: REF_MAX.fractions - REF_MIN.fractions + 1 }, (_, i) => i + REF_MIN.fractions)
+    : Array.from({ length: REF_MAX[mode] }, (_, i) => i + 1);
 
   return (
     <div>
-      <Section id="tables" title="Tables (1-25)">
-        <div className="smRefTableList">
-          {Array.from({ length: 25 }, (_, i) => i + 1).map((n) => (
-            <div className="smRefTableRow" key={n}>
-              <span className="smRefTableN">{n}</span>
-              <div className="smRefTableValues">
-                {getTableRow(n).map((r) => (
-                  <span key={r.multiple}>{r.product}</span>
-                ))}
-              </div>
+      <div className="smModeRow">
+        {REF_TAB_ORDER.map((m) => (
+          <button
+            key={m}
+            className={`smModeBtn smRefTab ${mode === m ? "active" : ""}`}
+            onClick={() => { setMode(m); setCurrent(REF_START[m]); }}
+          >
+            {REF_TAB_LABELS[m]}
+          </button>
+        ))}
+      </div>
+
+      <div className="smRefStage">
+        <div className="smRefGlow" />
+        <div className="smRefPickRow">
+          <button className="smRefPickArrow" onClick={() => setCurrent((c) => Math.max(REF_MIN[mode], c - 1))}>‹</button>
+          <div className="smRefPickStrip" ref={stripRef}>
+            {values.map((v) => (
+              <button
+                key={v}
+                className={`smRefPickChip ${current === v ? "active" : ""}`}
+                onClick={() => setCurrent(v)}
+              >
+                {mode === "fractions" ? `/${v}` : v}
+              </button>
+            ))}
+          </div>
+          <button className="smRefPickArrow" onClick={() => setCurrent((c) => Math.min(REF_MAX[mode], c + 1))}>›</button>
+        </div>
+
+        <div className="smRefBigAnswer">
+          <div className={`smRefEq ${!big ? "noVal" : ""}`}>{refLabel(mode, current)}</div>
+          {big && <div className="smRefVal">{big}</div>}
+        </div>
+
+        <div className="smRefMiniList">
+          {rows.map((r) => (
+            <div className={`smRefMiniRow ${r.hi ? "current" : ""}`} key={r.l}>
+              <b>{r.l}</b><span>{r.r}</span>
             </div>
           ))}
         </div>
-      </Section>
 
-      <Section id="squares" title="Squares (1-50)">
-        <div className="smRefGrid">
-          {squares.map((s) => (
-            <div className="smRefChip" key={s.n}><b>{s.n}</b><span>{s.square}</span></div>
-          ))}
-        </div>
-      </Section>
-
-      <Section id="cubes" title="Cubes (1-30)">
-        <div className="smRefGrid">
-          {cubes.map((c) => (
-            <div className="smRefChip" key={c.n}><b>{c.n}</b><span>{c.cube}</span></div>
-          ))}
-        </div>
-      </Section>
-
-      <Section id="fractions" title="Fraction ↔ % table">
-        <div className="smRefFracGroups">
-          {Array.from(fracByDen.keys()).sort((a, b) => a - b).map((den) => (
-            <div className="smRefFracGroup" key={den}>
-              <div className="smRefFracDen">/{den}</div>
-              <div className="smRefGrid">
-                {fracByDen.get(den)!.map((f) => (
-                  <div className="smRefChip" key={`${f.num}/${f.den}`}>
-                    <b>{f.num}/{f.den}</b><span>{f.truncPct.toFixed(2)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
+        <div className="smRefHint">Use ← → or tap the strip above to jump between numbers.</div>
+      </div>
     </div>
   );
 }
@@ -223,7 +265,7 @@ export default function SpeedMaths() {
         </div>
 
         {mode === "reference" ? (
-          <ReferenceCharts />
+          <ReferenceStage />
         ) : (
         <>
         <div className="smCard">
