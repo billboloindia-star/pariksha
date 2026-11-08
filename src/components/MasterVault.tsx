@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../../shared/api";
 import type { BankSectionSummary, BankSubConceptSummary, Difficulty, Paper } from "../../shared/types";
+import DrillBrowse from "./DrillBrowse";
 
 interface Props {
   onLoaded: (p: Paper) => void;
@@ -106,6 +107,7 @@ function paceLabel(secPerQ: number): { text: string; tight: boolean } {
 }
 
 export default function MasterVault({ onLoaded, seed }: Props) {
+  const [mode, setMode] = useState<"scored" | "drill">("scored");
   const [sections, setSections] = useState<BankSectionSummary[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -306,6 +308,19 @@ export default function MasterVault({ onLoaded, seed }: Props) {
           </div>
         </div>
       </section>
+
+      <div className="mvModeTabs">
+        <button type="button" className={`mvModeTab ${mode === "scored" ? "active" : ""}`} onClick={() => setMode("scored")}>
+          Scored practice
+        </button>
+        <button type="button" className={`mvModeTab ${mode === "drill" ? "active" : ""}`} onClick={() => setMode("drill")}>
+          Browse drill <span className="mvModeTabHint">no answers — self-check</span>
+        </button>
+      </div>
+
+      {mode === "drill" && <DrillBrowse section="Reasoning" />}
+
+      {mode === "scored" && <>
 
       {seed?.noMatchTopic && (
         <div className="mvNoMatchBanner">
@@ -547,6 +562,8 @@ export default function MasterVault({ onLoaded, seed }: Props) {
           </section>
         </>
       )}
+
+      </>}
     </div>
   );
 }

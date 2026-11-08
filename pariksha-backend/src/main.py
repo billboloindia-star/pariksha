@@ -553,8 +553,11 @@ def _validate_bank_question(q: BankQuestionIn, index: int) -> str | None:
     elif q.type == "num":
         if q.answer is None:
             return f"Question {index + 1}: numeric question needs an answer."
+    elif q.type == "practice":
+        if not q.options or len(q.options) < 2:
+            return f"Question {index + 1}: practice question needs at least two options."
     else:
-        return f"Question {index + 1}: type must be \"mc\" or \"num\"."
+        return f"Question {index + 1}: type must be \"mc\", \"num\" or \"practice\"."
     return None
 
 
@@ -583,20 +586,29 @@ def ingest_bank_questions(body: BankIngestRequest, email: str = Depends(require_
     return BankIngestResult(ingested=len(rows), errors=errors[:5])
 
 
+def _is_drill_item(item: dict) -> bool:
+    return item.get("type") == "practice"
+
+
 @app.get("/bank/sections", response_model=List[BankSectionSummary])
-def bank_sections(email: str = Depends(require_premium)):
-    # Only the three small attributes needed for counting - the full items
+def bank_sections(drill: bool = False, email: str = Depends(require_premium)):
+    # Only the four small attributes needed for counting - the full items
     # (text/options/solution/table/image) are most of each item's size, and
     # pulling all of them across 8k+ rows is what made this endpoint take
     # ~10s; a count-only projection cuts the transferred payload drastically.
+    # `drill` toggles between the scored bank (mc/num, default) and the
+    # ungraded browse-only "practice" type - kept entirely separate so an
+    # answerless question can never inflate a scored session's count.
     items = _query_all(
         bank_table,
         KeyConditionExpression=Key("userId").eq(email),
-        ProjectionExpression="#sec, chapter, difficulty",
-        ExpressionAttributeNames={"#sec": "section"},
+        ProjectionExpression="#sec, chapter, difficulty, #typ",
+        ExpressionAttributeNames={"#sec": "section", "#typ": "type"},
     )
     groups: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"easy": 0, "medium": 0, "hard": 0})
     for item in items:
+        if _is_drill_item(item) != drill:
+            continue
         key = (item.get("section", ""), item.get("chapter", ""))
         diff = item.get("difficulty", "medium")
         if diff not in groups[key]:
@@ -611,7 +623,7 @@ def bank_sections(email: str = Depends(require_premium)):
 
 
 @app.get("/bank/subconcepts", response_model=List[BankSubConceptSummary])
-def bank_subconcepts(section: str, chapters: str, email: str = Depends(require_premium)):
+def bank_subconcepts(section: str, chapters: str, drill: bool = False, email: str = Depends(require_premium)):
     chapter_list = [c.strip() for c in chapters.split(",") if c.strip()]
     counts: dict[tuple[str, str], int] = defaultdict(int)
     for chapter in chapter_list:
@@ -619,9 +631,12 @@ def bank_subconcepts(section: str, chapters: str, email: str = Depends(require_p
             bank_table,
             IndexName="BankBySectionChapterIndex",
             KeyConditionExpression=Key("userId").eq(email) & Key("sectionChapter").eq(_section_chapter(section, chapter)),
-            ProjectionExpression="subConcept",
+            ProjectionExpression="subConcept, #typ",
+            ExpressionAttributeNames={"#typ": "type"},
         )
         for item in items:
+            if _is_drill_item(item) != drill:
+                continue
             sc = item.get("subConcept")
             if sc:
                 counts[(chapter, sc)] += 1
@@ -636,6 +651,7 @@ def bank_questions(
     section: str,
     chapters: str,
     difficulty: str | None = None,
+    drill: bool = False,
     email: str = Depends(require_premium),
 ):
     chapter_list = [c.strip() for c in chapters.split(",") if c.strip()]
@@ -647,6 +663,7 @@ def bank_questions(
             KeyConditionExpression=Key("userId").eq(email)
             & Key("sectionChapter").eq(_section_chapter(section, chapter)),
         ))
+    out = [q for q in out if _is_drill_item(q) == drill]
     if difficulty:
         out = [q for q in out if q.get("difficulty") == difficulty]
     return [_from_decimal(q) for q in out]
@@ -662,6 +679,9 @@ def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(req
             KeyConditionExpression=Key("userId").eq(email)
             & Key("sectionChapter").eq(_section_chapter(body.section, chapter)),
         ))
+    # Ungraded "practice" questions have no answer - never let one slip
+    # into a scored session even if its chapter/subConcept got selected.
+    pool = [q for q in pool if not _is_drill_item(q)]
     if body.difficulty:
         pool = [q for q in pool if q.get("difficulty") == body.difficulty]
     if body.subConcepts:

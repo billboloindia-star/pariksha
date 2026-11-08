@@ -180,12 +180,18 @@ class BankQuestionIn(BaseModel):
     # Optional: older/un-tagged questions simply have no sub-concept filter.
     subConcept: Optional[str] = None
     difficulty: str = "medium"
+    # "mc"/"num" are the scored types used by practice sessions. "practice"
+    # is an ungraded browse-only type - no answer, just a question, options,
+    # and (usually) a link to an external worked solution - for source
+    # material that has no written answer key at all. Never sampled into a
+    # scored practice-paper session.
     type: str = "mc"
     text: str
     options: Optional[List[str]] = None
     answer_index: Optional[int] = None
     answer: Optional[float] = None
     solution: Optional[str] = None
+    solutionLink: Optional[str] = None
     table: Optional[BankTableSpec] = None
     image: Optional[str] = None
 
