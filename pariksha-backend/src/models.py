@@ -136,6 +136,39 @@ class BankTableSpec(BaseModel):
     rows: List[List[object]]
 
 
+class BookmarkIn(BaseModel):
+    """A question starred while taking a mock/practice session (live, or
+    from the post-exam Report review) - a standalone copy of the question
+    so it survives independent of the source attempt."""
+    section: str
+    topic: str
+    type: str
+    text: str
+    table: Optional[BankTableSpec] = None
+    image: Optional[str] = None
+    solution: Optional[str] = None
+    options: Optional[List[str]] = None
+    ans: float
+    given: Optional[float] = None
+    wasCorrect: Optional[bool] = None
+    sourceLabel: str
+    sourceWhen: Optional[int] = None
+
+
+class Bookmark(BookmarkIn):
+    bookmarkId: str
+    note: Optional[str] = None
+    createdAt: int
+
+
+class BookmarkNoteUpdate(BaseModel):
+    note: str
+
+
+class BookmarkPracticeRequest(BaseModel):
+    bookmarkIds: List[str]
+
+
 class BankQuestionIn(BaseModel):
     # Mirrors shared/types.ts's RawQuestion field conventions (answer_index for
     # "mc", answer for "num"), plus the bank-specific tagging fields that make
