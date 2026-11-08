@@ -573,7 +573,7 @@ export default function Library({ onLoaded }: Props) {
         </span>
         <div className="dropText">
           <b>{uploading ? "Uploading…" : "Drag files here, or click to browse"}</b>
-          <span>PDF or image, one or several pages per paper &middot; up to 6MB each</span>
+          <span>PDF or image, one or several pages per paper &middot; up to 7MB each</span>
         </div>
         <span className="dropBtn">Choose files</span>
       </div>
@@ -632,7 +632,7 @@ export default function Library({ onLoaded }: Props) {
                     ) : (
                       <span className="statusPill pending onThumb">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                        Converting
+                        Not converted yet
                       </span>
                     )}
                     <span className="vcFileBadge">{isImage ? "IMG" : "PDF"}{fileCount > 1 ? ` +${fileCount - 1}` : ""}</span>

@@ -71,7 +71,7 @@ from src.models import (
     TopicResolveResponse,
 )
 
-MAX_LIBRARY_FILE_BYTES = 6 * 1024 * 1024
+MAX_LIBRARY_FILE_BYTES = 7 * 1024 * 1024  # API Gateway hard-caps request bodies at 10MB; base64 adds ~33% overhead, so 7MB raw (~9.3MB encoded) is the safe ceiling for this upload path
 MAX_LIBRARY_FILES_PER_UPLOAD = 20
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 ALLOWED_AVATAR_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
@@ -466,7 +466,7 @@ def upload_library_files(body: LibraryUpload, email: str = Depends(get_current_e
         except Exception:
             raise HTTPException(status_code=400, detail=f"Could not decode {f.fileName}.")
         if len(raw) > MAX_LIBRARY_FILE_BYTES:
-            raise HTTPException(status_code=413, detail=f"{f.fileName} is too large for the vault (max 6MB each).")
+            raise HTTPException(status_code=413, detail=f"{f.fileName} is too large for the vault (max 7MB each).")
         decoded.append((f, raw))
 
     item_id = uuid.uuid4().hex
