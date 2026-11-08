@@ -3,7 +3,7 @@ import {
   CHAPTERS, CHAPTER_ORDER, CHAPTER_GROUPS, CHAPTER_GROUP_LABELS, parseInlineMarkup,
   SQRT_LAST_DIGIT_MAP, IMPOSSIBLE_SQUARE_ENDINGS, CBRT_LAST_DIGIT_MAP,
   findSquareExample, findCubeExample, squareRootSteps, cubeRootSteps, landmarkNums,
-  type ChapterKey,
+  type ChapterKey, type SubConceptNote,
 } from "../../shared/studyVault";
 
 function renderInline(line: string, key: number) {
@@ -171,6 +171,32 @@ function SpeedMathsShortcuts() {
   );
 }
 
+function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
+  const [idx, setIdx] = useState(0);
+  const note = notes[idx];
+  return (
+    <div className="svSubConcepts">
+      <div className="svSubConceptLbl">Sub-concepts in this chapter</div>
+      <div className="svSubConceptChips">
+        {notes.map((n, i) => (
+          <button
+            key={n.name}
+            className={`svSubConceptChip ${i === idx ? "active" : ""}`}
+            onClick={() => setIdx(i)}
+          >
+            {n.name}
+          </button>
+        ))}
+      </div>
+      <div className="svSubConceptBody">
+        <div className="svConceptTitle">{note.name}</div>
+        <div className="svConceptBody">{note.body}</div>
+        {note.formula && <div className="svFeq" dangerouslySetInnerHTML={{ __html: note.formula }} />}
+      </div>
+    </div>
+  );
+}
+
 export default function StudyVault() {
   const [active, setActive] = useState<ChapterKey>(CHAPTER_ORDER[0]);
   const ch = CHAPTERS[active];
@@ -220,6 +246,7 @@ export default function StudyVault() {
                 </div>
               ))}
             </div>
+            {ch.subConcepts && <SubConceptPanel key={active} notes={ch.subConcepts} />}
             {ch.example && (
               <div className="svExampleBox">
                 <div className="svElbl">{ch.example.label}</div>

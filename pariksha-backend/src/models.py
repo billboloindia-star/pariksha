@@ -175,6 +175,10 @@ class BankQuestionIn(BaseModel):
     # a question filterable/browsable instead of fixed to one Paper.
     section: str
     chapter: str
+    # Finer-grained than chapter - e.g. chapter "Time & Work" might have
+    # sub-concepts like "Combined Work" or "People Joining/Leaving Mid-Task".
+    # Optional: older/un-tagged questions simply have no sub-concept filter.
+    subConcept: Optional[str] = None
     difficulty: str = "medium"
     type: str = "mc"
     text: str
@@ -213,9 +217,17 @@ class BankSectionSummary(BaseModel):
     byDifficulty: DifficultyCount
 
 
+class BankSubConceptSummary(BaseModel):
+    subConcept: str
+    count: int
+
+
 class PracticePaperRequest(BaseModel):
     section: str
     chapters: List[str]
+    # When set, only sample from these sub-concepts within the chosen
+    # chapters (chapters still required - this narrows further, not instead).
+    subConcepts: List[str] = []
     difficulty: Optional[str] = None
     count: int = 20
     durationMinutes: int = 20

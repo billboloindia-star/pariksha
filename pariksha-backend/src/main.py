@@ -34,6 +34,7 @@ from src.models import (
     BankQuestion,
     BankQuestionIn,
     BankSectionSummary,
+    BankSubConceptSummary,
     CalendarDay,
     ChangePasswordRequest,
     Credentials,
@@ -609,6 +610,22 @@ def bank_sections(email: str = Depends(require_premium)):
     ]
 
 
+@app.get("/bank/subconcepts", response_model=List[BankSubConceptSummary])
+def bank_subconcepts(section: str, chapter: str, email: str = Depends(require_premium)):
+    items = _query_all(
+        bank_table,
+        IndexName="BankBySectionChapterIndex",
+        KeyConditionExpression=Key("userId").eq(email) & Key("sectionChapter").eq(_section_chapter(section, chapter)),
+        ProjectionExpression="subConcept",
+    )
+    counts: dict[str, int] = defaultdict(int)
+    for item in items:
+        sc = item.get("subConcept")
+        if sc:
+            counts[sc] += 1
+    return [BankSubConceptSummary(subConcept=sc, count=n) for sc, n in sorted(counts.items())]
+
+
 @app.get("/bank/questions", response_model=List[BankQuestion])
 def bank_questions(
     section: str,
@@ -642,8 +659,11 @@ def generate_practice_paper(body: PracticePaperRequest, email: str = Depends(req
         ))
     if body.difficulty:
         pool = [q for q in pool if q.get("difficulty") == body.difficulty]
+    if body.subConcepts:
+        wanted = set(body.subConcepts)
+        pool = [q for q in pool if q.get("subConcept") in wanted]
     if not pool:
-        raise HTTPException(status_code=404, detail="No questions match that chapter/difficulty selection.")
+        raise HTTPException(status_code=404, detail="No questions match that chapter/difficulty/sub-concept selection.")
 
     sample = random.sample(pool, min(body.count, len(pool)))
     sample = [_from_decimal(q) for q in sample]

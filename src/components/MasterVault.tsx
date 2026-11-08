@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../../shared/api";
-import type { BankSectionSummary, Difficulty, Paper } from "../../shared/types";
+import type { BankSectionSummary, BankSubConceptSummary, Difficulty, Paper } from "../../shared/types";
 
 interface Props {
   onLoaded: (p: Paper) => void;
@@ -105,6 +105,8 @@ export default function MasterVault({ onLoaded, seed }: Props) {
   const [loadError, setLoadError] = useState("");
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
+  const [subConceptOptions, setSubConceptOptions] = useState<BankSubConceptSummary[]>([]);
+  const [selectedSubConcepts, setSelectedSubConcepts] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<Difficulty | "">("");
   const [count, setCount] = useState(20);
   const [duration, setDuration] = useState(20);
@@ -153,6 +155,14 @@ export default function MasterVault({ onLoaded, seed }: Props) {
   const groupedChapters = useMemo(() => groupChapters(chaptersForSection), [chaptersForSection]);
 
   const availableForSelection = useMemo(() => {
+    if (selectedSubConcepts.length) {
+      // Sub-concept counts aren't split by difficulty server-side - this is
+      // an approximation when a difficulty filter is also active, but still
+      // far closer than ignoring the sub-concept narrowing entirely.
+      return subConceptOptions
+        .filter((s) => selectedSubConcepts.includes(s.subConcept))
+        .reduce((n, s) => n + s.count, 0);
+    }
     if (!difficulty) {
       return chaptersForSection
         .filter((c) => selectedChapters.includes(c.chapter))
@@ -161,16 +171,34 @@ export default function MasterVault({ onLoaded, seed }: Props) {
     return chaptersForSection
       .filter((c) => selectedChapters.includes(c.chapter))
       .reduce((n, c) => n + (c.byDifficulty[difficulty] ?? 0), 0);
-  }, [chaptersForSection, selectedChapters, difficulty]);
+  }, [chaptersForSection, selectedChapters, difficulty, selectedSubConcepts, subConceptOptions]);
 
   function changeSection(name: string) {
     setActiveSection(name);
     setSelectedChapters([]);
+    setSubConceptOptions([]);
+    setSelectedSubConcepts([]);
   }
 
   function toggleChapter(chapter: string) {
     setSelectedChapters((prev) => (prev.includes(chapter) ? prev.filter((c) => c !== chapter) : [...prev, chapter]));
+    setSelectedSubConcepts([]);
   }
+
+  function toggleSubConcept(name: string) {
+    setSelectedSubConcepts((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  }
+
+  // Sub-concept filtering only makes sense with exactly one chapter picked -
+  // it narrows within a single chapter's own topic breakdown, not across
+  // several at once (those don't share a sub-concept vocabulary).
+  useEffect(() => {
+    if (!activeSection || selectedChapters.length !== 1) {
+      setSubConceptOptions([]);
+      return;
+    }
+    api.fetchBankSubConcepts(activeSection, selectedChapters[0]).then(setSubConceptOptions).catch(() => setSubConceptOptions([]));
+  }, [activeSection, selectedChapters]);
 
   const maxCount = Math.min(count > 0 ? Math.max(count, availableForSelection || 1) : 337, Math.max(availableForSelection, 5));
   const secPerQ = count > 0 ? (duration * 60) / count : 0;
@@ -187,6 +215,7 @@ export default function MasterVault({ onLoaded, seed }: Props) {
       const paper = await api.generatePracticePaper({
         section: activeSection,
         chapters: selectedChapters,
+        subConcepts: selectedSubConcepts.length ? selectedSubConcepts : undefined,
         difficulty: difficulty || undefined,
         count: Math.max(1, count || 20),
         durationMinutes: Math.max(1, duration || 20),
@@ -329,6 +358,26 @@ export default function MasterVault({ onLoaded, seed }: Props) {
                     : <><b>{availableForSelection.toLocaleString()} questions</b> available from {selectedChapters.length} selected chapter{selectedChapters.length === 1 ? "" : "s"}</>}
                 </p>
 
+                {subConceptOptions.length > 0 && (
+                  <div className="mvFieldRow">
+                    <div className="fieldLabel" style={{ margin: 0 }}>
+                      Sub-concept<span className="fieldHint">optional — narrow to specific question types</span>
+                    </div>
+                    <div className="mvSubConceptRow">
+                      {subConceptOptions.map((s) => (
+                        <button
+                          key={s.subConcept}
+                          type="button"
+                          className={`mvSubConceptChip ${selectedSubConcepts.includes(s.subConcept) ? "active" : ""}`}
+                          onClick={() => toggleSubConcept(s.subConcept)}
+                        >
+                          {s.subConcept} <small>{s.count}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mvFieldRow">
                   <div className="fieldLabel" style={{ margin: 0 }}>Difficulty</div>
                   <div className="mvDiffRow">
@@ -400,6 +449,12 @@ export default function MasterVault({ onLoaded, seed }: Props) {
                   <b>{selectedChapters.length} chapter{selectedChapters.length === 1 ? "" : "s"}</b>
                   {selectedChapters.length ? selectedChapters.join(", ") : "None selected yet"}
                 </div>
+                {selectedSubConcepts.length > 0 && (
+                  <div className="mvSumChapters">
+                    <b>{selectedSubConcepts.length} sub-concept{selectedSubConcepts.length === 1 ? "" : "s"}</b>
+                    {selectedSubConcepts.join(", ")}
+                  </div>
+                )}
                 <div className="mvSumStat">{count} <span>questions</span></div>
                 <div className="mvSumMeta"><b>{duration} min</b> &middot; {difficulty ? DIFFICULTIES.find((d) => d.value === difficulty)?.label : "any"} difficulty</div>
                 <button className="mvStartBtn" onClick={generate} disabled={generating || selectedChapters.length === 0}>
