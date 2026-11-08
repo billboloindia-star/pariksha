@@ -1621,6 +1621,28 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .smStartBtn{width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#e8305a,#c91c46);color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 16px 30px -14px rgba(201,28,70,.55)}
 .smStartBtn:disabled{opacity:.5;cursor:not-allowed}
 
+.smModeRow{display:flex;gap:8px;margin-bottom:18px}
+.smModeBtn{flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--line-2);background:var(--soft);color:var(--dim);font-weight:800;font-size:13.5px;cursor:pointer}
+.smModeBtn.active{background:#111827;border-color:#111827;color:#fff}
+
+.smRefToggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;margin:0 0 14px;cursor:pointer;text-align:left}
+.smRefToggle h2{margin:0}
+.smRefToggle span{font-size:20px;font-weight:800;color:var(--dim)}
+.smRefBody{margin-top:-6px}
+
+.smRefTableList{display:flex;flex-direction:column;gap:6px;max-height:460px;overflow-y:auto}
+.smRefTableRow{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:var(--soft)}
+.smRefTableN{flex:0 0 28px;font-weight:800;font-size:14px;color:#e8305a}
+.smRefTableValues{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+.smRefGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.smRefChip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.smRefChip b{font-size:12.5px;color:var(--dim)}
+.smRefChip span{font-size:13px;font-weight:800}
+
+.smRefFracGroups{display:flex;flex-direction:column;gap:16px;max-height:460px;overflow-y:auto}
+.smRefFracDen{font-size:12.5px;font-weight:800;color:#e8305a;margin-bottom:8px}
+
 .smDrillPage{max-width:560px}
 .smDrillTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--dim)}
 .smDrillProgress{font-family:var(--mono)}

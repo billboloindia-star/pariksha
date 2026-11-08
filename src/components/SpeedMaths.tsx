@@ -5,6 +5,10 @@ import {
   generateSpeedMathQuestion,
   checkSpeedMathAnswer,
   summarizeSpeedMathSession,
+  getTableRow,
+  getSquaresList,
+  getCubesList,
+  FRACTION_TABLE,
   type SpeedMathType,
   type SpeedMathQuestion,
   type SpeedMathRecord,
@@ -13,12 +17,90 @@ import {
 } from "../../shared/speedMaths";
 
 type Phase = "setup" | "drill" | "results";
+type Mode = "drill" | "reference";
 
 const COUNT_OPTIONS = [10, 20, 30, 50];
 const DURATION_OPTIONS = [2, 5, 10];
 
+function ReferenceCharts() {
+  const [open, setOpen] = useState<string | null>("tables");
+  const squares = getSquaresList(50);
+  const cubes = getCubesList(30);
+  const fracByDen = new Map<number, typeof FRACTION_TABLE>();
+  for (const f of FRACTION_TABLE) {
+    if (!fracByDen.has(f.den)) fracByDen.set(f.den, []);
+    fracByDen.get(f.den)!.push(f);
+  }
+
+  function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+    const isOpen = open === id;
+    return (
+      <div className="smCard">
+        <button className="smRefToggle" onClick={() => setOpen(isOpen ? null : id)}>
+          <h2>{title}</h2>
+          <span>{isOpen ? "−" : "+"}</span>
+        </button>
+        {isOpen && <div className="smRefBody">{children}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Section id="tables" title="Tables (1-25)">
+        <div className="smRefTableList">
+          {Array.from({ length: 25 }, (_, i) => i + 1).map((n) => (
+            <div className="smRefTableRow" key={n}>
+              <span className="smRefTableN">{n}</span>
+              <div className="smRefTableValues">
+                {getTableRow(n).map((r) => (
+                  <span key={r.multiple}>{r.product}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="squares" title="Squares (1-50)">
+        <div className="smRefGrid">
+          {squares.map((s) => (
+            <div className="smRefChip" key={s.n}><b>{s.n}</b><span>{s.square}</span></div>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="cubes" title="Cubes (1-30)">
+        <div className="smRefGrid">
+          {cubes.map((c) => (
+            <div className="smRefChip" key={c.n}><b>{c.n}</b><span>{c.cube}</span></div>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="fractions" title="Fraction ↔ % table">
+        <div className="smRefFracGroups">
+          {Array.from(fracByDen.keys()).sort((a, b) => a - b).map((den) => (
+            <div className="smRefFracGroup" key={den}>
+              <div className="smRefFracDen">/{den}</div>
+              <div className="smRefGrid">
+                {fracByDen.get(den)!.map((f) => (
+                  <div className="smRefChip" key={`${f.num}/${f.den}`}>
+                    <b>{f.num}/{f.den}</b><span>{f.truncPct.toFixed(2)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
 export default function SpeedMaths() {
   const [phase, setPhase] = useState<Phase>("setup");
+  const [mode, setMode] = useState<Mode>("drill");
   const [types, setTypes] = useState<Set<SpeedMathType>>(new Set(ALL_SPEED_MATH_TYPES));
   const [paceMode, setPaceMode] = useState<SpeedMathPaceMode>("count");
   const [count, setCount] = useState(20);
@@ -135,6 +217,15 @@ export default function SpeedMaths() {
           </div>
         </div>
 
+        <div className="smModeRow">
+          <button className={`smModeBtn ${mode === "drill" ? "active" : ""}`} onClick={() => setMode("drill")}>Drill</button>
+          <button className={`smModeBtn ${mode === "reference" ? "active" : ""}`} onClick={() => setMode("reference")}>Study material</button>
+        </div>
+
+        {mode === "reference" ? (
+          <ReferenceCharts />
+        ) : (
+        <>
         <div className="smCard">
           <h2>What to practice</h2>
           <div className="smTypeGrid">
@@ -188,6 +279,8 @@ export default function SpeedMaths() {
         <button className="smStartBtn" disabled={types.size === 0} onClick={startSession}>
           Start drill
         </button>
+        </>
+        )}
       </div>
     );
   }
