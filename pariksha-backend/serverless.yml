@@ -19,6 +19,7 @@ provider:
     BANK_IMAGES_BUCKET: pariksha-bank-images-${self:provider.stage}-${aws:accountId}
     TARGET_EXAM_TABLE: pariksha-target-exam-${self:provider.stage}
     TOPIC_MAP_TABLE: pariksha-topic-map-${self:provider.stage}
+    BOOKMARKS_TABLE: pariksha-bookmarks-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -67,6 +68,14 @@ provider:
             - dynamodb:GetItem
             - dynamodb:PutItem
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.TOPIC_MAP_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKMARKS_TABLE}
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -207,6 +216,22 @@ resources:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: topicNorm
+            KeyType: RANGE
+
+    BookmarksTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.BOOKMARKS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: bookmarkId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: bookmarkId
             KeyType: RANGE
 
     LibraryBucket:

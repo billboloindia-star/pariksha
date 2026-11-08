@@ -3,6 +3,7 @@ import type { AiReview as AiReviewData, AttemptQuestionRecord, AttemptRecord, Ex
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
 import AiReview from "./AiReview";
+import BookmarkStar from "./BookmarkStar";
 import ScoreDonut from "./ScoreDonut";
 import TopicBars from "./TopicBars";
 import * as api from "../../shared/api";
@@ -527,6 +528,13 @@ export default function Report({ result, onAgain }: Props) {
                     <span className="qTag">Q{selectedQ! + 1}</span>
                     <span className="chip">{selected.topic}</span>
                     <span className={`resTag ${selectedRes}`}>{selectedRes}</span>
+                    <BookmarkStar
+                      q={selected}
+                      given={selectedState.given}
+                      wasCorrect={selectedRes === "skipped" ? null : selectedRes === "correct"}
+                      sourceLabel={paper.title}
+                      key={selectedQ}
+                    />
                     <span className="muted small timeTag">{selectedState.given === null ? "—" : secs(selectedState.timeMs)}</span>
                   </div>
                   <div className="reviewText">{selected.text}</div>

@@ -21,7 +21,7 @@ from mangum import Mangum
 from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
 from src.config import settings
-from src.db import attempts_table, bank_table, library_table, s3, target_exam_table, topic_map_table, users_table
+from src.db import attempts_table, bank_table, bookmarks_table, library_table, s3, target_exam_table, topic_map_table, users_table
 from src.exam_plan import ExamPlanInput, ExamPlanner, SectionConfidenceInput, WeakTopicInput
 from src.topic_resolver import BankChapterOption, TopicResolveInput, TopicResolver
 from src.models import (
@@ -46,6 +46,10 @@ from src.models import (
     PracticePaperRequest,
     ProfileUpdate,
     QuestionNoteUpdate,
+    Bookmark,
+    BookmarkIn,
+    BookmarkNoteUpdate,
+    BookmarkPracticeRequest,
     SectionConfidence,
     TargetExamAcceptRequest,
     TargetExamGenerateRequest,
@@ -269,6 +273,82 @@ def update_question_note(
     return {"ok": True}
 
 
+@app.post("/bookmarks", response_model=Bookmark)
+def add_bookmark(body: BookmarkIn, email: str = Depends(get_current_email)):
+    item = Bookmark(bookmarkId=uuid.uuid4().hex, createdAt=int(time.time() * 1000), **body.model_dump())
+    bookmarks_table.put_item(Item=_to_decimal({"userId": email, **item.model_dump()}))
+    return item
+
+
+@app.get("/bookmarks", response_model=List[Bookmark])
+def list_bookmarks(email: str = Depends(get_current_email)):
+    items = _query_all(bookmarks_table, KeyConditionExpression=Key("userId").eq(email))
+    items = [_from_decimal(i) for i in items]
+    items.sort(key=lambda i: i.get("createdAt", 0), reverse=True)
+    return [Bookmark(**{k: v for k, v in i.items() if k != "userId"}) for i in items]
+
+
+@app.patch("/bookmarks/{bookmark_id}/note", response_model=Bookmark)
+def update_bookmark_note(bookmark_id: str, body: BookmarkNoteUpdate, email: str = Depends(get_current_email)):
+    try:
+        res = bookmarks_table.update_item(
+            Key={"userId": email, "bookmarkId": bookmark_id},
+            UpdateExpression="SET #note = :val",
+            ExpressionAttributeNames={"#note": "note"},
+            ExpressionAttributeValues={":val": body.note},
+            ConditionExpression="attribute_exists(userId)",
+            ReturnValues="ALL_NEW",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise HTTPException(status_code=404, detail="Bookmark not found.")
+        raise
+    item = _from_decimal(res["Attributes"])
+    return Bookmark(**{k: v for k, v in item.items() if k != "userId"})
+
+
+@app.delete("/bookmarks/{bookmark_id}")
+def delete_bookmark(bookmark_id: str, email: str = Depends(get_current_email)):
+    bookmarks_table.delete_item(Key={"userId": email, "bookmarkId": bookmark_id})
+    return {"ok": True}
+
+
+@app.post("/bookmarks/practice-paper")
+def bookmarks_practice_paper(body: BookmarkPracticeRequest, email: str = Depends(get_current_email)):
+    items = _query_all(bookmarks_table, KeyConditionExpression=Key("userId").eq(email))
+    items = [_from_decimal(i) for i in items if i.get("bookmarkId") in set(body.bookmarkIds)]
+    if not items:
+        raise HTTPException(status_code=404, detail="None of those bookmarks were found.")
+    items.sort(key=lambda i: i.get("createdAt", 0))
+
+    sections_seen: list[str] = []
+    for it in items:
+        if it["section"] not in sections_seen:
+            sections_seen.append(it["section"])
+    questions = []
+    for it in items:
+        questions.append({
+            "id": it["bookmarkId"], "section": it["section"], "topic": it["topic"], "type": it["type"],
+            "text": it["text"], "table": it.get("table"), "image": it.get("image"),
+            "solution": it.get("solution"), "options": it.get("options"), "ans": it["ans"],
+        })
+    sections = []
+    cursor = 0
+    for sec in sections_seen:
+        count = sum(1 for q in questions if q["section"] == sec)
+        sections.append({"name": sec, "from": cursor, "to": cursor + count - 1})
+        cursor += count
+
+    return {
+        "title": f"Bookmarked practice — {len(questions)} questions",
+        "exam": sections_seen[0] if len(sections_seen) == 1 else "Mixed",
+        "durationMinutes": max(10, round(len(questions) * 1.2)),
+        "negativeMarking": 0.25,
+        "sections": sections,
+        "questions": questions,
+    }
+
+
 @app.post("/analyze", response_model=PerformanceReview)
 def analyze(data: PerformanceInput, email: str = Depends(get_current_email)):
     try:
@@ -302,8 +382,14 @@ def _decode_cursor(cursor: str) -> dict:
 LIBRARY_LIST_PAGE_SIZE = 30
 
 
+def _library_item_matches(item: dict, needle: str) -> bool:
+    if needle in (item.get("title") or "").lower():
+        return True
+    return any(needle in (f.get("fileName") or "").lower() for f in item.get("files") or [])
+
+
 @app.get("/library", response_model=LibraryListResponse)
-def list_library(cursor: str | None = None, email: str = Depends(get_current_email)):
+def list_library(cursor: str | None = None, q: str | None = None, email: str = Depends(get_current_email)):
     # A full item can embed a 30-50 question paper (each with its own text/
     # options) - sending every item's full paper inline in one response, for
     # a vault that's grown to 200+ items, blew past a few MB and made the
@@ -314,24 +400,43 @@ def list_library(cursor: str | None = None, email: str = Depends(get_current_ema
     # _query_all loop used elsewhere, which is for internal aggregation
     # reads that must see everything - this endpoint deliberately returns
     # one bounded page per call).
-    kwargs: dict = dict(
-        KeyConditionExpression=Key("userId").eq(email),
-        ScanIndexForward=False,
-        Limit=LIBRARY_LIST_PAGE_SIZE,
-    )
-    if cursor:
-        kwargs["ExclusiveStartKey"] = _decode_cursor(cursor)
-    res = library_table.query(**kwargs)
+    #
+    # With `q` set, DynamoDB's own Limit applies BEFORE any title/fileName
+    # filtering, so a single page query can come back with zero matches even
+    # though matches exist further in the table - this loops across
+    # underlying pages, accumulating matches, until it has a full page OR
+    # genuinely runs out of items, so "next" always means "more matches
+    # exist", not "the next raw DB page happened to be empty."
+    needle = q.strip().lower() if q else None
+    out: list = []
+    start_key = _decode_cursor(cursor) if cursor else None
+    exhausted = False
+    while len(out) < LIBRARY_LIST_PAGE_SIZE and not exhausted:
+        kwargs: dict = dict(
+            KeyConditionExpression=Key("userId").eq(email),
+            ScanIndexForward=False,
+            Limit=LIBRARY_LIST_PAGE_SIZE,
+        )
+        if start_key:
+            kwargs["ExclusiveStartKey"] = start_key
+        res = library_table.query(**kwargs)
 
-    out = []
-    for item in res.get("Items", []):
-        paper = item.get("paper")
-        light = _from_decimal({k: v for k, v in item.items() if k not in ("userId", "paper")})
-        light["hasPaper"] = bool(paper)
-        light["questionCount"] = len(paper.get("questions", [])) if paper else None
-        out.append(light)
+        for item in res.get("Items", []):
+            if needle and not _library_item_matches(item, needle):
+                continue
+            paper = item.get("paper")
+            light = _from_decimal({k: v for k, v in item.items() if k not in ("userId", "paper")})
+            light["hasPaper"] = bool(paper)
+            light["questionCount"] = len(paper.get("questions", [])) if paper else None
+            out.append(light)
 
-    next_cursor = _encode_cursor(res["LastEvaluatedKey"]) if "LastEvaluatedKey" in res else None
+        start_key = res.get("LastEvaluatedKey")
+        if not start_key:
+            exhausted = True
+        if not needle:
+            break  # unfiltered listing is already one bounded page, no need to loop
+
+    next_cursor = _encode_cursor(start_key) if start_key else None
     return {"items": out, "nextCursor": next_cursor}
 
 

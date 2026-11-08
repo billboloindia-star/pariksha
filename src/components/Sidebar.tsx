@@ -3,7 +3,7 @@ import * as api from "../../shared/api";
 import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
-export type HubPhase = "home" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault";
+export type HubPhase = "home" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault" | "bookmarks";
 
 interface Props {
   active: HubPhase;
@@ -47,6 +47,9 @@ export function TargetExamIcon() {
 export function StudyVaultIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
 }
+export function BookmarksIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 2h12v20l-6-4.5L6 22Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
+}
 
 export function hubItems(session?: api.Session | null): { phase: HubPhase; label: string; icon: ReactElement }[] {
   return [
@@ -64,6 +67,9 @@ export function hubItems(session?: api.Session | null): { phase: HubPhase; label
       : []),
     ...(api.backendEnabled() && api.canUseBankFeature(session ?? null)
       ? [{ phase: "studyvault" as const, label: "Study Vault", icon: <StudyVaultIcon /> }]
+      : []),
+    ...(api.backendEnabled() && session
+      ? [{ phase: "bookmarks" as const, label: "Bookmarks", icon: <BookmarksIcon /> }]
       : []),
   ];
 }

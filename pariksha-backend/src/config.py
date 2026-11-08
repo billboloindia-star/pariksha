@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     bank_images_bucket: str = ""
     target_exam_table: str = "pariksha-target-exam-dev"
     topic_map_table: str = "pariksha-topic-map-dev"
+    bookmarks_table: str = "pariksha-bookmarks-dev"
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 

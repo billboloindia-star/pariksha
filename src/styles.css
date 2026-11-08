@@ -350,6 +350,13 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 
 .qPanel{background:#fff;padding:22px 26px 26px;min-height:420px;display:flex;flex-direction:column;overflow-y:auto}
 .qTop{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px;font-size:13px;color:var(--dim)}
+
+.bkmStarBtn{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line-2);background:var(--soft);border-radius:10px;padding:7px 10px;cursor:pointer;color:var(--grey)}
+.bkmStarBtn svg{stroke:currentColor;fill:none}
+.bkmStarBtn.active{background:#fdf1de;border-color:#e8962a;color:#d9740f}
+.bkmStarBtn.active svg{stroke:#d9740f;fill:#e8962a}
+.bkmStarBtn:disabled{cursor:default}
+.bkmStarLbl{font-size:11.5px;font-weight:700}
 .qNo b{color:var(--ink);font-size:15px}
 .marks b{color:var(--ink)}
 .marks i{color:var(--line-2);font-style:normal;margin:0 4px}
@@ -2247,3 +2254,45 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .svLandmarkRow{display:flex;gap:8px;flex-wrap:wrap}
 .svLandmarkChip{background:#0e1c30;border:1px solid #263a55;border-radius:9px;padding:7px 10px;font-family:var(--mono);font-size:11.5px;color:#8296b3}
 .svLandmarkChip b{color:#fff}
+
+/* ---------- Bookmarks ---------- */
+.bkmPage{max-width:860px;margin:0 auto;padding:28px 28px 60px}
+.bkmHead{margin-bottom:22px}
+.bkmHead h1{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.bkmHead p{margin:0;font-size:13.5px;color:var(--dim)}
+.bkmError{background:var(--red-bg);color:var(--red);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
+
+.bkmFilterRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.bkmFilterChip{padding:8px 15px;border-radius:999px;border:1.5px solid var(--line-2);background:#fff;font-size:12.5px;font-weight:700;color:var(--dim);cursor:pointer}
+.bkmFilterChip.active{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.bkmChapterCard{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 16px 40px -28px rgba(19,31,54,.22);margin-bottom:18px}
+.bkmChapterHead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;gap:14px}
+.bkmChapterSection{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
+.bkmChapterName{font-size:15.5px;font-weight:800;margin-top:1px}
+.bkmChapterMeta{font-size:12px;color:var(--grey);margin-top:2px}
+.bkmPracticeAllBtn{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.bkmPracticeAllBtn:disabled{opacity:.6;cursor:default}
+
+.bkmRowList{border-top:1px solid var(--line)}
+.bkmRow{display:flex;gap:14px;padding:16px 22px;border-bottom:1px solid var(--line);align-items:flex-start}
+.bkmRow:last-child{border-bottom:none}
+.bkmRowStar{flex-shrink:0;margin-top:2px;color:#e8962a}
+.bkmRowStar svg{stroke:#d9740f;fill:#e8962a}
+.bkmRowBody{flex:1;min-width:0}
+.bkmRowText{font-size:13.5px;line-height:1.55;margin-bottom:6px}
+.bkmRowMeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.bkmRowTag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px}
+.bkmRowTag.wrong{background:#fbe6e4;color:var(--red)}
+.bkmRowTag.right{background:#e3f2e8;color:var(--green)}
+.bkmRowDate{font-size:11px;color:var(--grey)}
+.bkmRowNote{background:var(--soft);border-left:3px solid var(--amber,#e8962a);border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;color:var(--dim);margin-bottom:8px}
+.bkmRowNote b{color:var(--ink);font-weight:700}
+.bkmRowActions{display:flex;gap:14px;flex-wrap:wrap}
+.bkmRowAction{font-size:12px;font-weight:700;color:var(--blue-2,#1668b5);cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.bkmRowAction:disabled{opacity:.6;cursor:default}
+.bkmRowAction.danger{color:var(--grey)}
+
+.bkmNoteEdit{margin-bottom:8px}
+.bkmNoteEdit textarea{width:100%;border:1.5px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical}
+.bkmNoteEditActions{display:flex;gap:14px;margin-top:6px}

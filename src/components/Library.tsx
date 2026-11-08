@@ -79,12 +79,24 @@ export default function Library({ onLoaded }: Props) {
   const consoleRef = useRef<HTMLDivElement>(null);
   const yamlFileRef = useRef<HTMLInputElement>(null);
 
+  // The active search term pages are fetched for - separate from `query`
+  // (the live input value) so typing doesn't refetch on every keystroke;
+  // see the debounce effect below. Empty string = browsing the whole vault.
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
-    api.fetchLibrary().then((res) => {
+    const t = setTimeout(() => setSearchTerm(query.trim()), 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    setPages(null);
+    api.fetchLibrary(undefined, searchTerm || undefined).then((res) => {
       setPages([res.items]);
       setNextCursors([res.nextCursor]);
+      setPageIndex(0);
     }).catch(() => setPages([[]]));
-  }, []);
+  }, [searchTerm]);
 
   const items = pages ? pages[pageIndex] ?? null : null;
   const hasPrevPage = pageIndex > 0;
@@ -101,7 +113,7 @@ export default function Library({ onLoaded }: Props) {
     setPageLoading(true);
     setPageError("");
     try {
-      const res = await api.fetchLibrary(cursor);
+      const res = await api.fetchLibrary(cursor, searchTerm || undefined);
       setPages((prev) => [...(prev ?? []), res.items]);
       setNextCursors((prev) => [...prev, res.nextCursor]);
       setPageIndex(pageIndex + 1);
@@ -533,8 +545,6 @@ export default function Library({ onLoaded }: Props) {
     );
   }
 
-  const shown = (items ?? []).filter((it) => it.title.toLowerCase().includes(query.trim().toLowerCase()));
-
   return (
     <div className="home">
       <div className="vaultHero">
@@ -569,25 +579,27 @@ export default function Library({ onLoaded }: Props) {
       </div>
       {uploadError && <pre className="error">{uploadError}</pre>}
 
-      {items === null && <div className="loadingBlock"><Spinner size={18} label="Loading your vault…" /></div>}
-      {items !== null && items.length === 0 && <p className="muted">Nothing in your vault yet &mdash; upload a paper above.</p>}
+      {items === null && <div className="loadingBlock"><Spinner size={18} label={searchTerm ? "Searching your vault…" : "Loading your vault…"} /></div>}
       {openError && <pre className="error">{openError}</pre>}
       {pageError && <pre className="error">{pageError}</pre>}
 
+      {items !== null && (query.trim() || items.length > 0) && (
+        <div className="vaultSearch">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" strokeLinecap="round" /></svg>
+          <input placeholder="Search your whole vault…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+      )}
+
+      {items !== null && items.length === 0 && (
+        <p className="muted">
+          {searchTerm ? <>No papers match &ldquo;{searchTerm}&rdquo; anywhere in your vault.</> : <>Nothing in your vault yet &mdash; upload a paper above.</>}
+        </p>
+      )}
+
       {items !== null && items.length > 0 && (
         <>
-          <div className="vaultSearch">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" strokeLinecap="round" /></svg>
-            <input placeholder="Search this page by title…" value={query} onChange={(e) => setQuery(e.target.value)} />
-            {(hasNextPage || hasPrevPage) && (
-              <p className="vaultSearchHint">Only searches the papers currently loaded &mdash; use Next/Previous below to look through more.</p>
-            )}
-          </div>
-
-          {shown.length === 0 && <p className="muted">No papers on this page match &ldquo;{query}&rdquo;.</p>}
-
           <div className="vaultGrid">
-            {shown.map((it) => {
+            {items.map((it) => {
               const fileCount = it.files.length;
               const isImage = isImageType(it.files[0]?.fileType ?? "");
               return (

@@ -6,6 +6,7 @@ import type { ExamProgress } from "../../shared/examPersist";
 import { buildResult } from "../../shared/scoring";
 import { webExamPlatform } from "../examPlatform";
 import LaggyCursor from "./LaggyCursor";
+import BookmarkStar from "./BookmarkStar";
 
 interface Props {
   paper: Paper;
@@ -231,6 +232,7 @@ export default function Exam({ paper, onFinish, settings, initialProgress, onDis
             <span className="marks">
               Marks <b>+1.0</b> <i>|</i> Negative <b>-{paper.negativeMarking}</b>
             </span>
+            <BookmarkStar q={q} given={st.given} sourceLabel={paper.title} key={q.id} />
           </div>
 
           <div className="qTypeRow">
