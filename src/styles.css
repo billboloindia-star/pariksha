@@ -2391,3 +2391,18 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .bkmNoteEdit{margin-bottom:8px}
 .bkmNoteEdit textarea{width:100%;border:1.5px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical}
 .bkmNoteEditActions{display:flex;gap:14px;margin-top:6px}
+
+.clpPage{max-width:1040px;margin:0 auto;padding:28px 28px 60px}
+.clpHead{margin-bottom:22px}
+.clpHead h1{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.clpHead p{margin:0;font-size:13.5px;color:var(--dim)}
+.clpGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+.clpCard{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 16px 40px -28px rgba(19,31,54,.22);display:flex;flex-direction:column}
+.clpImgBtn{display:block;width:100%;aspect-ratio:4/3;padding:0;border:none;background:#f2f5fa;cursor:zoom-in;overflow:hidden}
+.clpImgBtn img{width:100%;height:100%;object-fit:cover}
+.clpCardBody{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.clpTags{display:flex;gap:6px;flex-wrap:wrap}
+.clpTag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--soft);color:var(--dim)}
+.clpTag.section{background:#1b3a6b;color:#fff}
+.clpTag.sub{background:var(--blue-bg,#e8f1fd);color:var(--blue-2,#1668b5)}
+.clpCardFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}

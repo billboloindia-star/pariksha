@@ -3,7 +3,7 @@ import * as api from "../../shared/api";
 import { computeStreak } from "../../shared/history";
 import Logo from "./Logo";
 
-export type HubPhase = "home" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault" | "bookmarks";
+export type HubPhase = "home" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault" | "bookmarks" | "noteclips";
 
 interface Props {
   active: HubPhase;
@@ -50,6 +50,9 @@ export function StudyVaultIcon() {
 export function BookmarksIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 2h12v20l-6-4.5L6 22Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
 }
+export function ClipsIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" /><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8.5 7.5 20 19M20 5 8.5 16.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+}
 
 export function hubItems(session?: api.Session | null): { phase: HubPhase; label: string; icon: ReactElement }[] {
   return [
@@ -70,6 +73,9 @@ export function hubItems(session?: api.Session | null): { phase: HubPhase; label
       : []),
     ...(api.backendEnabled() && session
       ? [{ phase: "bookmarks" as const, label: "Bookmarks", icon: <BookmarksIcon /> }]
+      : []),
+    ...(api.backendEnabled() && session
+      ? [{ phase: "noteclips" as const, label: "My Clips", icon: <ClipsIcon /> }]
       : []),
   ];
 }

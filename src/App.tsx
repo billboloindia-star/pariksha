@@ -17,14 +17,15 @@ import SpeedMaths from "./components/SpeedMaths";
 import TargetExam from "./components/TargetExam";
 import StudyVault from "./components/StudyVault";
 import Bookmarks from "./components/Bookmarks";
+import NoteClips from "./components/NoteClips";
 import * as api from "../shared/api";
 import type { ExamResult, ExamSettings } from "../shared/types";
 import type { Paper } from "../shared/types";
 import { clearInProgress, loadInProgress } from "../shared/examPersist";
 import type { ExamProgress } from "../shared/examPersist";
 
-type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault" | "bookmarks";
-const HUB_PHASES: Phase[] = ["home", "progress", "library", "vault", "profile", "speedmaths", "targetexam", "studyvault", "bookmarks"];
+type Phase = "home" | "login" | "review" | "syscheck" | "instructions" | "exam" | "report" | "progress" | "library" | "vault" | "profile" | "speedmaths" | "targetexam" | "studyvault" | "bookmarks" | "noteclips";
+const HUB_PHASES: Phase[] = ["home", "progress", "library", "vault", "profile", "speedmaths", "targetexam", "studyvault", "bookmarks", "noteclips"];
 
 const DEFAULT_SETTINGS: ExamSettings = { monitorTabSwitches: true, simulateZoom: false, simulateLaggyCursor: false, examCenterSkin: false };
 
@@ -108,6 +109,7 @@ export default function App() {
           {phase === "targetexam" && api.canUseBankFeature(session) && <TargetExam onPracticeTopic={onPracticeTopic} />}
           {phase === "studyvault" && api.canUseBankFeature(session) && <StudyVault />}
           {phase === "bookmarks" && <Bookmarks onLoaded={onLoaded} />}
+          {phase === "noteclips" && <NoteClips />}
         </HubLayout>
       )}
       {phase === "login" && (
