@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     target_exam_table: str = "pariksha-target-exam-dev"
     topic_map_table: str = "pariksha-topic-map-dev"
     bookmarks_table: str = "pariksha-bookmarks-dev"
+    noteclips_table: str = "pariksha-noteclips-dev"
     aws_region: str = "ap-south-1"
     stage: str = "dev"
 

@@ -1,6 +1,7 @@
 """Pariksha backend: email/password accounts + attempt history, on AWS Lambda."""
 
 import base64
+import io
 import json
 import math
 import random
@@ -11,17 +12,19 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Dict, List
+from urllib.parse import urlparse
 
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
+from PIL import Image as PILImage
 
 from src.ai_review import GeminiReviewer, PerformanceInput, PerformanceReview
 from src.auth import create_jwt, get_current_email, hash_password, verify_password
 from src.config import settings
-from src.db import attempts_table, bank_table, bookmarks_table, library_table, s3, target_exam_table, topic_map_table, users_table
+from src.db import attempts_table, bank_table, bookmarks_table, library_table, noteclips_table, s3, target_exam_table, topic_map_table, users_table
 from src.exam_plan import ExamPlanInput, ExamPlanner, SectionConfidenceInput, WeakTopicInput
 from src.topic_resolver import BankChapterOption, TopicResolveInput, TopicResolver
 from src.models import (
@@ -51,6 +54,10 @@ from src.models import (
     BookmarkIn,
     BookmarkNoteUpdate,
     BookmarkPracticeRequest,
+    CropBox,
+    NoteClip,
+    NoteClipIn,
+    NoteClipNoteUpdate,
     SectionConfidence,
     TargetExamAcceptRequest,
     TargetExamGenerateRequest,
@@ -348,6 +355,93 @@ def bookmarks_practice_paper(body: BookmarkPracticeRequest, email: str = Depends
         "sections": sections,
         "questions": questions,
     }
+
+
+def _noteclip_source_key(url: str) -> str:
+    """Only ever crop images we actually host (studynotes/ in our own
+    bank-images bucket) - never fetch an arbitrary URL server-side."""
+    parsed = urlparse(url)
+    expected_host = f"{settings.bank_images_bucket}.s3.{settings.aws_region}.amazonaws.com"
+    if parsed.netloc != expected_host or not parsed.path.startswith("/studynotes/"):
+        raise HTTPException(status_code=400, detail="That image isn't one we can crop.")
+    return parsed.path.lstrip("/")
+
+
+@app.post("/noteclips", response_model=NoteClip)
+def add_note_clip(body: NoteClipIn, email: str = Depends(get_current_email)):
+    key = _noteclip_source_key(body.sourceImageUrl)
+    try:
+        raw = s3.get_object(Bucket=settings.bank_images_bucket, Key=key)["Body"].read()
+    except ClientError:
+        raise HTTPException(status_code=404, detail="Source page image not found.")
+
+    img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+    w, h = img.size
+    box = body.cropBox
+    left = max(0, min(w, round(box.x * w)))
+    top = max(0, min(h, round(box.y * h)))
+    right = max(left + 1, min(w, round((box.x + box.width) * w)))
+    bottom = max(top + 1, min(h, round((box.y + box.height) * h)))
+    cropped = img.crop((left, top, right, bottom))
+
+    out = io.BytesIO()
+    cropped.save(out, format="PNG")
+    clip_id = uuid.uuid4().hex
+    clip_key = f"noteclips/{email}/{clip_id}.png"
+    s3.put_object(Bucket=settings.bank_images_bucket, Key=clip_key, Body=out.getvalue(), ContentType="image/png")
+    image_url = f"https://{settings.bank_images_bucket}.s3.{settings.aws_region}.amazonaws.com/{clip_key}"
+
+    item = NoteClip(
+        clipId=clip_id,
+        section=body.section,
+        chapter=body.chapter,
+        subConcept=body.subConcept,
+        sourceImageUrl=body.sourceImageUrl,
+        imageUrl=image_url,
+        note=body.note,
+        createdAt=int(time.time() * 1000),
+    )
+    noteclips_table.put_item(Item=_to_decimal({"userId": email, **item.model_dump()}))
+    return item
+
+
+@app.get("/noteclips", response_model=List[NoteClip])
+def list_note_clips(email: str = Depends(get_current_email)):
+    items = _query_all(noteclips_table, KeyConditionExpression=Key("userId").eq(email))
+    items = [_from_decimal(i) for i in items]
+    items.sort(key=lambda i: i.get("createdAt", 0), reverse=True)
+    return [NoteClip(**{k: v for k, v in i.items() if k != "userId"}) for i in items]
+
+
+@app.patch("/noteclips/{clip_id}/note", response_model=NoteClip)
+def update_note_clip_note(clip_id: str, body: NoteClipNoteUpdate, email: str = Depends(get_current_email)):
+    try:
+        res = noteclips_table.update_item(
+            Key={"userId": email, "clipId": clip_id},
+            UpdateExpression="SET #note = :val",
+            ExpressionAttributeNames={"#note": "note"},
+            ExpressionAttributeValues={":val": body.note},
+            ConditionExpression="attribute_exists(userId)",
+            ReturnValues="ALL_NEW",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise HTTPException(status_code=404, detail="Clip not found.")
+        raise
+    item = _from_decimal(res["Attributes"])
+    return NoteClip(**{k: v for k, v in item.items() if k != "userId"})
+
+
+@app.delete("/noteclips/{clip_id}")
+def delete_note_clip(clip_id: str, email: str = Depends(get_current_email)):
+    item = noteclips_table.get_item(Key={"userId": email, "clipId": clip_id}).get("Item")
+    if item:
+        try:
+            s3.delete_object(Bucket=settings.bank_images_bucket, Key=f"noteclips/{email}/{clip_id}.png")
+        except ClientError:
+            pass
+    noteclips_table.delete_item(Key={"userId": email, "clipId": clip_id})
+    return {"ok": True}
 
 
 @app.post("/analyze", response_model=PerformanceReview)

@@ -169,6 +169,43 @@ class BookmarkPracticeRequest(BaseModel):
     bookmarkIds: List[str]
 
 
+class CropBox(BaseModel):
+    """A selection rectangle expressed as fractions (0-1) of the source
+    image's width/height, so it's resolution-independent of whatever size
+    the source page image happens to be."""
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+class NoteClipIn(BaseModel):
+    """A user-selected crop of a Study Vault handwritten-notes page, saved
+    as its own personal reference with whatever topic metadata was
+    available at save time."""
+    section: str
+    chapter: str
+    subConcept: Optional[str] = None
+    sourceImageUrl: str
+    cropBox: CropBox
+    note: Optional[str] = None
+
+
+class NoteClip(BaseModel):
+    clipId: str
+    section: str
+    chapter: str
+    subConcept: Optional[str] = None
+    sourceImageUrl: str
+    imageUrl: str
+    note: Optional[str] = None
+    createdAt: int
+
+
+class NoteClipNoteUpdate(BaseModel):
+    note: str
+
+
 class BankQuestionIn(BaseModel):
     # Mirrors shared/types.ts's RawQuestion field conventions (answer_index for
     # "mc", answer for "num"), plus the bank-specific tagging fields that make

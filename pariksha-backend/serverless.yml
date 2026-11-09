@@ -20,6 +20,7 @@ provider:
     TARGET_EXAM_TABLE: pariksha-target-exam-${self:provider.stage}
     TOPIC_MAP_TABLE: pariksha-topic-map-${self:provider.stage}
     BOOKMARKS_TABLE: pariksha-bookmarks-${self:provider.stage}
+    NOTECLIPS_TABLE: pariksha-noteclips-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
     GEMINI_API_KEY: ${env:GEMINI_API_KEY}
 
@@ -76,6 +77,14 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.BOOKMARKS_TABLE}
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.NOTECLIPS_TABLE}
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -232,6 +241,22 @@ resources:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: bookmarkId
+            KeyType: RANGE
+
+    NoteClipsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.NOTECLIPS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: clipId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: clipId
             KeyType: RANGE
 
     LibraryBucket:
