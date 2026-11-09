@@ -258,7 +258,7 @@ export default function StudyVault() {
         </div>
       ))}
 
-      <div className="svStage">
+      <div className="svStage" key={active}>
         {ch.isSpeedMaths ? (
           <SpeedMathsShortcuts />
         ) : (
@@ -280,8 +280,8 @@ export default function StudyVault() {
                 </div>
               ))}
             </div>
-            {ch.subConcepts && <SubConceptPanel key={active} notes={ch.subConcepts} />}
-            {ch.notesPages && <NotesGallery key={active} title={ch.label} pages={ch.notesPages} />}
+            {ch.subConcepts && <SubConceptPanel notes={ch.subConcepts} />}
+            {ch.notesPages && <NotesGallery title={ch.label} pages={ch.notesPages} />}
             {ch.example && (
               <div className="svExampleBox">
                 <div className="svElbl">{ch.example.label}</div>
