@@ -1,10 +1,24 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import {
   CHAPTERS, CHAPTER_ORDER, CHAPTER_GROUPS, CHAPTER_GROUP_LABELS, parseInlineMarkup,
   SQRT_LAST_DIGIT_MAP, IMPOSSIBLE_SQUARE_ENDINGS, CBRT_LAST_DIGIT_MAP,
   findSquareExample, findCubeExample, squareRootSteps, cubeRootSteps, landmarkNums,
   type ChapterKey, type SubConceptNote,
 } from "../../shared/studyVault";
+import * as api from "../../shared/api";
+import type { CropBox } from "../../shared/types";
+
+/** The rectangle (in box-relative px) where an <img object-fit:contain>
+ * actually draws its pixels - needed to map a drag selection in screen
+ * space back to a fraction of the real image content, since the element's
+ * own box is often letterboxed around the image. */
+function containRect(boxW: number, boxH: number, natW: number, natH: number) {
+  const boxRatio = boxW / boxH;
+  const natRatio = natW / natH;
+  let w: number, h: number;
+  if (natRatio > boxRatio) { w = boxW; h = boxW / natRatio; } else { h = boxH; w = boxH * natRatio; }
+  return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
+}
 
 function renderInline(line: string, key: number) {
   return (
@@ -171,32 +185,91 @@ function SpeedMathsShortcuts() {
   );
 }
 
-function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
+type NoteClipMeta = { section: string; chapter: string; subConcept?: string };
+
+function NotesGallery({ title, pages, meta }: { title: string; pages: string[]; meta: NoteClipMeta }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [selection, setSelection] = useState<CropBox | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canClip = api.backendEnabled() && !!api.getSession();
 
   useEffect(() => {
     if (lightbox === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { if (fullscreen) setFullscreen(false); else setLightbox(null); }
-      else if (e.key === "ArrowLeft" && lightbox > 0) setLightbox(lightbox - 1);
-      else if (e.key === "ArrowRight" && lightbox < pages.length - 1) setLightbox(lightbox + 1);
+      if (e.key === "Escape") {
+        if (selection) { setSelection(null); setSelecting(false); }
+        else if (fullscreen) setFullscreen(false);
+        else setLightbox(null);
+      }
+      else if (e.key === "ArrowLeft" && !selecting && lightbox > 0) setLightbox(lightbox - 1);
+      else if (e.key === "ArrowRight" && !selecting && lightbox < pages.length - 1) setLightbox(lightbox + 1);
       else if (e.key === "f" || e.key === "F") setFullscreen((f) => !f);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [lightbox, fullscreen, pages.length]);
+  }, [lightbox, fullscreen, pages.length, selecting, selection]);
 
   if (pages.length === 0) return null;
-  const close = () => { setLightbox(null); setFullscreen(false); };
+  const close = () => { setLightbox(null); setFullscreen(false); setSelecting(false); setSelection(null); };
+  const changePage = (next: number) => { setLightbox(next); setSelecting(false); setSelection(null); setNoteText(""); setSaveState("idle"); };
 
   let touchStartX = 0;
   const onTouchStart = (e: React.TouchEvent) => { touchStartX = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
+    if (selecting) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (lightbox === null) return;
-    if (dx <= -50 && lightbox < pages.length - 1) setLightbox(lightbox + 1);
-    else if (dx >= 50 && lightbox > 0) setLightbox(lightbox - 1);
+    if (dx <= -50 && lightbox < pages.length - 1) changePage(lightbox + 1);
+    else if (dx >= 50 && lightbox > 0) changePage(lightbox - 1);
+  };
+
+  // Map a pointer's client coords to a 0-1 fraction of the real image
+  // content (accounting for object-fit:contain letterboxing), clamped.
+  const fractionAt = (clientX: number, clientY: number) => {
+    const img = imgRef.current;
+    if (!img) return null;
+    const box = img.getBoundingClientRect();
+    const rect = containRect(box.width, box.height, img.naturalWidth, img.naturalHeight);
+    const px = clientX - box.left - rect.x;
+    const py = clientY - box.top - rect.y;
+    return { x: Math.max(0, Math.min(1, px / rect.w)), y: Math.max(0, Math.min(1, py / rect.h)) };
+  };
+
+  const onSelectDown = (e: React.MouseEvent) => {
+    if (!selecting) return;
+    e.preventDefault();
+    const f = fractionAt(e.clientX, e.clientY);
+    if (f) { setDragStart(f); setSelection(null); }
+  };
+  const onSelectMove = (e: React.MouseEvent) => {
+    if (!selecting || !dragStart) return;
+    const f = fractionAt(e.clientX, e.clientY);
+    if (!f) return;
+    setSelection({
+      x: Math.min(dragStart.x, f.x), y: Math.min(dragStart.y, f.y),
+      width: Math.abs(f.x - dragStart.x), height: Math.abs(f.y - dragStart.y),
+    });
+  };
+  const onSelectUp = () => { setDragStart(null); };
+
+  const saveClip = async () => {
+    if (!selection || lightbox === null || selection.width < 0.02 || selection.height < 0.02) return;
+    setSaveState("saving");
+    try {
+      await api.addNoteClip({
+        section: meta.section, chapter: meta.chapter, subConcept: meta.subConcept,
+        sourceImageUrl: pages[lightbox], cropBox: selection, note: noteText.trim() || undefined,
+      });
+      setSaveState("saved");
+      setTimeout(() => { setSelecting(false); setSelection(null); setNoteText(""); setSaveState("idle"); }, 1200);
+    } catch {
+      setSaveState("error");
+    }
   };
 
   return (
@@ -210,31 +283,71 @@ function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
         ))}
       </div>
       {lightbox !== null && (
-        <div className={`svLightbox ${fullscreen ? "fullscreen" : ""}`} onClick={close}>
+        <div className={`svLightbox ${fullscreen ? "fullscreen" : ""}`} onClick={selecting ? undefined : close}>
           <div className="svLightboxInner" onClick={(e) => e.stopPropagation()}>
             {!fullscreen && (
               <div className="svLightboxHead">
                 <span>{title} — page {lightbox + 1} of {pages.length}</span>
                 <div className="svLightboxHeadBtns">
+                  {canClip && (
+                    <button
+                      className={`svLightboxExpand ${selecting ? "active" : ""}`}
+                      onClick={() => { setSelecting((s) => !s); setSelection(null); }}
+                      title="Select a region to save (crop)"
+                    >✂️</button>
+                  )}
                   <button className="svLightboxExpand" onClick={() => setFullscreen(true)} title="Fullscreen (F)">⛶</button>
                   <button className="svLightboxClose" onClick={close}>✕</button>
                 </div>
               </div>
             )}
-            <img
-              className={fullscreen ? "svLightboxImgFull" : undefined}
-              src={pages[lightbox]}
-              alt={`${title} — handwritten notes page ${lightbox + 1}`}
-              onTouchStart={onTouchStart}
-              onTouchEnd={onTouchEnd}
-            />
-            {fullscreen && (
-              <button className="svLightboxShrinkBtn" onClick={() => setFullscreen(false)} title="Exit fullscreen (Esc)">⤢</button>
+            <div
+              className={`svLightboxImgWrap ${selecting ? "selecting" : ""}`}
+              onMouseDown={onSelectDown}
+              onMouseMove={onSelectMove}
+              onMouseUp={onSelectUp}
+              onMouseLeave={onSelectUp}
+            >
+              <img
+                ref={imgRef}
+                className={fullscreen ? "svLightboxImgFull" : undefined}
+                src={pages[lightbox]}
+                alt={`${title} — handwritten notes page ${lightbox + 1}`}
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+                draggable={false}
+              />
+              {selection && (
+                <div
+                  className="svCropBox"
+                  style={{ left: `${selection.x * 100}%`, top: `${selection.y * 100}%`, width: `${selection.width * 100}%`, height: `${selection.height * 100}%` }}
+                />
+              )}
+              {fullscreen && (
+                <button className="svLightboxShrinkBtn" onClick={() => setFullscreen(false)} title="Exit fullscreen (Esc)">⤢</button>
+              )}
+            </div>
+            {selecting && selection && selection.width > 0.02 && selection.height > 0.02 && (
+              <div className="svClipSavePanel" onClick={(e) => e.stopPropagation()}>
+                <textarea
+                  className="svClipNoteInput"
+                  placeholder="Add a note (optional)…"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  rows={2}
+                />
+                <div className="svClipSaveRow">
+                  <button className="svClipCancelBtn" onClick={() => { setSelection(null); setNoteText(""); setSaveState("idle"); }}>Discard</button>
+                  <button className="svClipSaveBtn" disabled={saveState === "saving"} onClick={saveClip}>
+                    {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : saveState === "error" ? "Try again" : "Save as clip"}
+                  </button>
+                </div>
+              </div>
             )}
             <div className={fullscreen ? "svLightboxNav fullscreen" : "svLightboxNav"}>
-              <button disabled={lightbox === 0} onClick={() => setLightbox(lightbox - 1)}>← Prev</button>
+              <button disabled={lightbox === 0} onClick={() => changePage(lightbox - 1)}>← Prev</button>
               {fullscreen && <span className="svLightboxCount">{lightbox + 1} / {pages.length}</span>}
-              <button disabled={lightbox === pages.length - 1} onClick={() => setLightbox(lightbox + 1)}>Next →</button>
+              <button disabled={lightbox === pages.length - 1} onClick={() => changePage(lightbox + 1)}>Next →</button>
             </div>
           </div>
         </div>
@@ -243,7 +356,7 @@ function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
   );
 }
 
-function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
+function SubConceptPanel({ notes, chapterLabel }: { notes: SubConceptNote[]; chapterLabel: string }) {
   const [idx, setIdx] = useState(0);
   const note = notes[idx];
 
@@ -265,7 +378,7 @@ function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
         <div className="svConceptTitle">{note.name}</div>
         <div className="svConceptBody">{note.body}</div>
         {note.formula && <div className="svFeq" dangerouslySetInnerHTML={{ __html: note.formula }} />}
-        <NotesGallery key={note.name} title={note.name} pages={note.notesPages ?? []} />
+        <NotesGallery key={note.name} title={note.name} pages={note.notesPages ?? []} meta={{ section: "Quant", chapter: chapterLabel, subConcept: note.name }} />
       </div>
     </div>
   );
@@ -320,8 +433,8 @@ export default function StudyVault() {
                 </div>
               ))}
             </div>
-            {ch.subConcepts && <SubConceptPanel notes={ch.subConcepts} />}
-            {!ch.subConcepts && ch.notesPages && <NotesGallery title={ch.label} pages={ch.notesPages} />}
+            {ch.subConcepts && <SubConceptPanel notes={ch.subConcepts} chapterLabel={ch.label} />}
+            {!ch.subConcepts && ch.notesPages && <NotesGallery title={ch.label} pages={ch.notesPages} meta={{ section: "Quant", chapter: ch.label }} />}
             {ch.example && (
               <div className="svExampleBox">
                 <div className="svElbl">{ch.example.label}</div>
