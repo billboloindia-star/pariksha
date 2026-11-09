@@ -171,11 +171,41 @@ function SpeedMathsShortcuts() {
   );
 }
 
+function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  if (pages.length === 0) return null;
+  return (
+    <div className="svNotesGallery">
+      <div className="svNotesGalleryLbl">Teacher's handwritten notes on this topic ({pages.length} page{pages.length > 1 ? "s" : ""})</div>
+      <div className="svNotesThumbRow">
+        {pages.map((url, i) => (
+          <button key={url} className="svNotesThumb" onClick={() => setLightbox(i)}>
+            <img src={url} alt={`${title} — handwritten notes page ${i + 1}`} loading="lazy" />
+          </button>
+        ))}
+      </div>
+      {lightbox !== null && (
+        <div className="svLightbox" onClick={() => setLightbox(null)}>
+          <div className="svLightboxInner" onClick={(e) => e.stopPropagation()}>
+            <div className="svLightboxHead">
+              <span>{title} — page {lightbox + 1} of {pages.length}</span>
+              <button className="svLightboxClose" onClick={() => setLightbox(null)}>✕</button>
+            </div>
+            <img src={pages[lightbox]} alt={`${title} — handwritten notes page ${lightbox + 1}`} />
+            <div className="svLightboxNav">
+              <button disabled={lightbox === 0} onClick={() => setLightbox(lightbox - 1)}>← Prev</button>
+              <button disabled={lightbox === pages.length - 1} onClick={() => setLightbox(lightbox + 1)}>Next →</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
   const [idx, setIdx] = useState(0);
-  const [lightbox, setLightbox] = useState<number | null>(null);
   const note = notes[idx];
-  const pages = note.notesPages ?? [];
 
   return (
     <div className="svSubConcepts">
@@ -185,7 +215,7 @@ function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
           <button
             key={n.name}
             className={`svSubConceptChip ${i === idx ? "active" : ""}`}
-            onClick={() => { setIdx(i); setLightbox(null); }}
+            onClick={() => setIdx(i)}
           >
             {n.name}
           </button>
@@ -195,34 +225,8 @@ function SubConceptPanel({ notes }: { notes: SubConceptNote[] }) {
         <div className="svConceptTitle">{note.name}</div>
         <div className="svConceptBody">{note.body}</div>
         {note.formula && <div className="svFeq" dangerouslySetInnerHTML={{ __html: note.formula }} />}
-        {pages.length > 0 && (
-          <div className="svNotesGallery">
-            <div className="svNotesGalleryLbl">Teacher's handwritten notes on this topic ({pages.length} page{pages.length > 1 ? "s" : ""})</div>
-            <div className="svNotesThumbRow">
-              {pages.map((url, i) => (
-                <button key={url} className="svNotesThumb" onClick={() => setLightbox(i)}>
-                  <img src={url} alt={`${note.name} — handwritten notes page ${i + 1}`} loading="lazy" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <NotesGallery key={note.name} title={note.name} pages={note.notesPages ?? []} />
       </div>
-      {lightbox !== null && (
-        <div className="svLightbox" onClick={() => setLightbox(null)}>
-          <div className="svLightboxInner" onClick={(e) => e.stopPropagation()}>
-            <div className="svLightboxHead">
-              <span>{note.name} — page {lightbox + 1} of {pages.length}</span>
-              <button className="svLightboxClose" onClick={() => setLightbox(null)}>✕</button>
-            </div>
-            <img src={pages[lightbox]} alt={`${note.name} — handwritten notes page ${lightbox + 1}`} />
-            <div className="svLightboxNav">
-              <button disabled={lightbox === 0} onClick={() => setLightbox(lightbox - 1)}>← Prev</button>
-              <button disabled={lightbox === pages.length - 1} onClick={() => setLightbox(lightbox + 1)}>Next →</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -277,6 +281,7 @@ export default function StudyVault() {
               ))}
             </div>
             {ch.subConcepts && <SubConceptPanel key={active} notes={ch.subConcepts} />}
+            {ch.notesPages && <NotesGallery key={active} title={ch.label} pages={ch.notesPages} />}
             {ch.example && (
               <div className="svExampleBox">
                 <div className="svElbl">{ch.example.label}</div>
