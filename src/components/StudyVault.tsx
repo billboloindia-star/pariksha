@@ -281,7 +281,7 @@ export default function StudyVault() {
               ))}
             </div>
             {ch.subConcepts && <SubConceptPanel notes={ch.subConcepts} />}
-            {ch.notesPages && <NotesGallery title={ch.label} pages={ch.notesPages} />}
+            {!ch.subConcepts && ch.notesPages && <NotesGallery title={ch.label} pages={ch.notesPages} />}
             {ch.example && (
               <div className="svExampleBox">
                 <div className="svElbl">{ch.example.label}</div>
