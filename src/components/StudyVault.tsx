@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   CHAPTERS, CHAPTER_ORDER, CHAPTER_GROUPS, CHAPTER_GROUP_LABELS, parseInlineMarkup,
   SQRT_LAST_DIGIT_MAP, IMPOSSIBLE_SQUARE_ENDINGS, CBRT_LAST_DIGIT_MAP,
@@ -173,7 +173,23 @@ function SpeedMathsShortcuts() {
 
 function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (lightbox === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { if (fullscreen) setFullscreen(false); else setLightbox(null); }
+      else if (e.key === "ArrowLeft" && lightbox > 0) setLightbox(lightbox - 1);
+      else if (e.key === "ArrowRight" && lightbox < pages.length - 1) setLightbox(lightbox + 1);
+      else if (e.key === "f" || e.key === "F") setFullscreen((f) => !f);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox, fullscreen, pages.length]);
+
   if (pages.length === 0) return null;
+  const close = () => { setLightbox(null); setFullscreen(false); };
+
   return (
     <div className="svNotesGallery">
       <div className="svNotesGalleryLbl">Teacher's handwritten notes on this topic ({pages.length} page{pages.length > 1 ? "s" : ""})</div>
@@ -185,15 +201,24 @@ function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
         ))}
       </div>
       {lightbox !== null && (
-        <div className="svLightbox" onClick={() => setLightbox(null)}>
+        <div className={`svLightbox ${fullscreen ? "fullscreen" : ""}`} onClick={close}>
           <div className="svLightboxInner" onClick={(e) => e.stopPropagation()}>
-            <div className="svLightboxHead">
-              <span>{title} — page {lightbox + 1} of {pages.length}</span>
-              <button className="svLightboxClose" onClick={() => setLightbox(null)}>✕</button>
-            </div>
-            <img src={pages[lightbox]} alt={`${title} — handwritten notes page ${lightbox + 1}`} />
-            <div className="svLightboxNav">
+            {!fullscreen && (
+              <div className="svLightboxHead">
+                <span>{title} — page {lightbox + 1} of {pages.length}</span>
+                <div className="svLightboxHeadBtns">
+                  <button className="svLightboxExpand" onClick={() => setFullscreen(true)} title="Fullscreen (F)">⛶</button>
+                  <button className="svLightboxClose" onClick={close}>✕</button>
+                </div>
+              </div>
+            )}
+            <img className={fullscreen ? "svLightboxImgFull" : undefined} src={pages[lightbox]} alt={`${title} — handwritten notes page ${lightbox + 1}`} />
+            {fullscreen && (
+              <button className="svLightboxShrinkBtn" onClick={() => setFullscreen(false)} title="Exit fullscreen (Esc)">⤢</button>
+            )}
+            <div className={fullscreen ? "svLightboxNav fullscreen" : "svLightboxNav"}>
               <button disabled={lightbox === 0} onClick={() => setLightbox(lightbox - 1)}>← Prev</button>
+              {fullscreen && <span className="svLightboxCount">{lightbox + 1} / {pages.length}</span>}
               <button disabled={lightbox === pages.length - 1} onClick={() => setLightbox(lightbox + 1)}>Next →</button>
             </div>
           </div>
