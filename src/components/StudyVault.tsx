@@ -190,6 +190,15 @@ function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
   if (pages.length === 0) return null;
   const close = () => { setLightbox(null); setFullscreen(false); };
 
+  let touchStartX = 0;
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (lightbox === null) return;
+    if (dx <= -50 && lightbox < pages.length - 1) setLightbox(lightbox + 1);
+    else if (dx >= 50 && lightbox > 0) setLightbox(lightbox - 1);
+  };
+
   return (
     <div className="svNotesGallery">
       <div className="svNotesGalleryLbl">Teacher's handwritten notes on this topic ({pages.length} page{pages.length > 1 ? "s" : ""})</div>
@@ -212,7 +221,13 @@ function NotesGallery({ title, pages }: { title: string; pages: string[] }) {
                 </div>
               </div>
             )}
-            <img className={fullscreen ? "svLightboxImgFull" : undefined} src={pages[lightbox]} alt={`${title} — handwritten notes page ${lightbox + 1}`} />
+            <img
+              className={fullscreen ? "svLightboxImgFull" : undefined}
+              src={pages[lightbox]}
+              alt={`${title} — handwritten notes page ${lightbox + 1}`}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            />
             {fullscreen && (
               <button className="svLightboxShrinkBtn" onClick={() => setFullscreen(false)} title="Exit fullscreen (Esc)">⤢</button>
             )}
