@@ -61,6 +61,11 @@ class AttachmentUploadIn(BaseModel):
     fileBase64: str
 
 
+class BankTableSpec(BaseModel):
+    head: List[str]
+    rows: List[List[object]]
+
+
 class AttemptQuestionRecord(BaseModel):
     id: str
     topic: str
@@ -72,6 +77,9 @@ class AttemptQuestionRecord(BaseModel):
     timeMs: int
     note: Optional[str] = None
     attachments: Optional[List[Attachment]] = None
+    solution: Optional[str] = None
+    image: Optional[str] = None
+    table: Optional[BankTableSpec] = None
 
 
 class AttemptRecord(BaseModel):
@@ -148,11 +156,6 @@ class LibraryListResponse(BaseModel):
 class LibraryFileLink(BaseModel):
     fileName: str
     url: str
-
-
-class BankTableSpec(BaseModel):
-    head: List[str]
-    rows: List[List[object]]
 
 
 class BookmarkIn(BaseModel):

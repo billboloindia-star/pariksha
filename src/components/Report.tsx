@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AiReview as AiReviewData, Attachment, AttemptQuestionRecord, AttemptRecord, ExamResult, PerformanceInput, Question } from "../../shared/types";
+import type { AiReview as AiReviewData, AttemptQuestionRecord, AttemptRecord, ExamResult, PerformanceInput, Question } from "../../shared/types";
 import TrendChart from "./TrendChart";
 import type { Series } from "./TrendChart";
 import AiReview from "./AiReview";
-import BookmarkStar from "./BookmarkStar";
+import ReviewAnswers from "./ReviewAnswers";
 import ScoreDonut from "./ScoreDonut";
 import TopicBars from "./TopicBars";
 import * as api from "../../shared/api";
@@ -48,14 +48,20 @@ export default function Report({ result, onAgain }: Props) {
   const [history, setHistory] = useState<AttemptRecord[]>([]);
   const [savedWhen, setSavedWhen] = useState<number | null>(null);
 
+  const questionRecords = useMemo<AttemptQuestionRecord[]>(
+    () =>
+      paper.questions.map((q, i) => ({
+        id: q.id, topic: q.topic, type: q.type,
+        text: q.text.length > 400 ? q.text.slice(0, 399) + "…" : q.text,
+        options: q.options,
+        ans: q.ans, given: states[i].given, timeMs: states[i].timeMs,
+        solution: q.solution, image: q.image, table: q.table,
+      })),
+    [paper.questions, states]
+  );
+
   useEffect(() => {
     const when = Date.now();
-    const questionRecords: AttemptQuestionRecord[] = paper.questions.map((q, i) => ({
-      id: q.id, topic: q.topic, type: q.type,
-      text: q.text.length > 400 ? q.text.slice(0, 399) + "…" : q.text,
-      options: q.options,
-      ans: q.ans, given: states[i].given, timeMs: states[i].timeMs,
-    }));
     const rec: AttemptRecord = {
       when, title: paper.title, net: Number(net.toFixed(2)), total,
       correct, wrong, skipped, secs: Math.round(elapsedSec),
@@ -173,7 +179,6 @@ export default function Report({ result, onAgain }: Props) {
   const [aiReview, setAiReview] = useState<AiReviewData | null>(null);
 
   const [tab, setTab] = useState<"overview" | "topics" | "review" | "pacing" | "progress">("overview");
-  const [reviewFilter, setReviewFilter] = useState<"all" | "correct" | "wrong" | "skipped">("all");
 
   const topicRows = useMemo(() => {
     const rows = Object.entries(byTopic).map(([topic, t]) => ({
@@ -202,79 +207,6 @@ export default function Report({ result, onAgain }: Props) {
     const s = states[i];
     if (s.given === null) return "skipped";
     return s.given === paper.questions[i].ans ? "correct" : "wrong";
-  }
-
-  const filteredIndices = useMemo(() => {
-    const all = paper.questions.map((_, i) => i);
-    if (reviewFilter === "all") return all;
-    return all.filter((i) => questionStatus(i) === reviewFilter);
-  }, [paper.questions, reviewFilter, states]);
-
-  const [selectedQ, setSelectedQ] = useState<number | null>(null);
-  const [notes, setNotes] = useState<Record<number, string>>({});
-  const [noteSaving, setNoteSaving] = useState<"idle" | "saving" | "saved">("idle");
-  const [attachments, setAttachments] = useState<Record<number, Attachment[]>>({});
-  const [attachError, setAttachError] = useState<string | null>(null);
-  const [uploadingQ, setUploadingQ] = useState<number | null>(null);
-
-  function saveNote(qIndex: number, text: string) {
-    setNotes((prev) => ({ ...prev, [qIndex]: text }));
-  }
-
-  async function commitNote(qIndex: number, attachmentsOverride?: Attachment[]) {
-    if (savedWhen === null) return;
-    setNoteSaving("saving");
-    try {
-      await api.updateQuestionNote(savedWhen, qIndex, notes[qIndex] ?? "", attachmentsOverride ?? attachments[qIndex] ?? []);
-      setNoteSaving("saved");
-      setTimeout(() => setNoteSaving("idle"), 1200);
-    } catch {
-      setNoteSaving("idle");
-    }
-  }
-
-  const MAX_ATTACHMENTS_PER_Q = 3;
-
-  async function addAttachments(qIndex: number, files: FileList | File[]) {
-    setAttachError(null);
-    const existing = attachments[qIndex] ?? [];
-    const room = MAX_ATTACHMENTS_PER_Q - existing.length;
-    if (room <= 0) { setAttachError(`Max ${MAX_ATTACHMENTS_PER_Q} attachments per question.`); return; }
-    const toUpload = Array.from(files).slice(0, room);
-    setUploadingQ(qIndex);
-    try {
-      const uploaded: Attachment[] = [];
-      for (const f of toUpload) uploaded.push(await api.uploadAttachment(f));
-      const next = [...existing, ...uploaded];
-      setAttachments((prev) => ({ ...prev, [qIndex]: next }));
-      await commitNote(qIndex, next);
-    } catch (e) {
-      setAttachError(e instanceof Error ? e.message : "Couldn't attach that file.");
-    } finally {
-      setUploadingQ(null);
-    }
-  }
-
-  function removeAttachment(qIndex: number, i: number) {
-    const next = (attachments[qIndex] ?? []).filter((_, idx) => idx !== i);
-    setAttachments((prev) => ({ ...prev, [qIndex]: next }));
-    commitNote(qIndex, next);
-  }
-
-  useEffect(() => {
-    if (tab !== "review") return;
-    const firstWrong = paper.questions.findIndex((_, i) => questionStatus(i) === "wrong");
-    const firstAttempted = states.findIndex((s) => s.given !== null);
-    setSelectedQ(firstWrong >= 0 ? firstWrong : firstAttempted >= 0 ? firstAttempted : 0);
-    setReviewFilter("all");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
-
-  function stepReview(dir: 1 | -1) {
-    if (selectedQ === null) return;
-    const pos = filteredIndices.indexOf(selectedQ);
-    const next = filteredIndices[pos + dir];
-    if (next !== undefined) setSelectedQ(next);
   }
 
   async function requestAiReview() {
@@ -402,11 +334,6 @@ export default function Report({ result, onAgain }: Props) {
     URL.revokeObjectURL(url);
   }
 
-  const selected = selectedQ !== null ? paper.questions[selectedQ] : null;
-  const selectedState = selectedQ !== null ? states[selectedQ] : null;
-  const selectedRes = selectedQ !== null ? questionStatus(selectedQ) : null;
-  const selectedPos = selectedQ !== null ? filteredIndices.indexOf(selectedQ) : -1;
-
   return (
     <div className="report">
       <header className="examBar">
@@ -526,124 +453,7 @@ export default function Report({ result, onAgain }: Props) {
         )}
 
         {tab === "review" && (
-          <section className="repSection">
-            <div className="repHead">
-              <h3>Review answers</h3>
-              <button className="btn smallBtn" onClick={exportCsv}>Export CSV</button>
-            </div>
-
-            <div className="reviewFilters">
-              <button className={`reviewFilterChip ${reviewFilter === "all" ? "active" : ""}`} onClick={() => setReviewFilter("all")}>All {total}</button>
-              <button className={`reviewFilterChip ${reviewFilter === "correct" ? "active" : ""}`} onClick={() => setReviewFilter("correct")}>Correct {correct}</button>
-              <button className={`reviewFilterChip ${reviewFilter === "wrong" ? "active" : ""}`} onClick={() => setReviewFilter("wrong")}>Wrong {wrong}</button>
-              <button className={`reviewFilterChip ${reviewFilter === "skipped" ? "active" : ""}`} onClick={() => setReviewFilter("skipped")}>Skipped {skipped}</button>
-            </div>
-
-            <div className="reviewLayout">
-              <div className="miniPalette">
-                {filteredIndices.map((i) => (
-                  <button
-                    key={i}
-                    className={`miniCell ${questionStatus(i)} ${i === selectedQ ? "current" : ""}`}
-                    onClick={() => setSelectedQ(i)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                {filteredIndices.length === 0 && <p className="muted small">No questions in this filter.</p>}
-              </div>
-
-              {selected && selectedState && selectedRes && (
-                <div className="reviewDetail">
-                  <div className="reviewDetailTop">
-                    <span className="qTag">Q{selectedQ! + 1}</span>
-                    <span className="chip">{selected.topic}</span>
-                    <span className={`resTag ${selectedRes}`}>{selectedRes}</span>
-                    <BookmarkStar
-                      q={selected}
-                      given={selectedState.given}
-                      wasCorrect={selectedRes === "skipped" ? null : selectedRes === "correct"}
-                      sourceLabel={paper.title}
-                      key={selectedQ}
-                    />
-                    <span className="muted small timeTag">{selectedState.given === null ? "—" : secs(selectedState.timeMs)}</span>
-                  </div>
-                  <div className="reviewText">{selected.text}</div>
-                  <div className="reviewVals">
-                    {selectedState.given !== null && (
-                      <>
-                        <span className="muted">your answer</span>
-                        <b className={selectedRes === "correct" ? "good" : "bad"}>{givenText(selected, selectedState.given)}</b>
-                        <span className="arrow">→</span>
-                      </>
-                    )}
-                    <span className="muted">correct</span>
-                    <b className="good">{answerText(selected)}</b>
-                  </div>
-                  {selected.solution && <div className="solution">{selected.solution}</div>}
-
-                  {api.backendEnabled() && api.getSession() && (
-                    <div className="qNoteBox">
-                      <label htmlFor="qnote">Your note on this question</label>
-                      <textarea
-                        id="qnote"
-                        placeholder="e.g. remember: this formula, or silly mistake with signs&hellip;"
-                        value={notes[selectedQ!] ?? ""}
-                        onChange={(e) => saveNote(selectedQ!, e.target.value)}
-                        onBlur={() => commitNote(selectedQ!)}
-                        disabled={savedWhen === null}
-                        rows={2}
-                      />
-                      <span className="muted small qNoteStatus">
-                        {savedWhen === null ? "saving to your account…" : noteSaving === "saving" ? "saving…" : noteSaving === "saved" ? "saved" : " "}
-                      </span>
-
-                      <div className="noteAttachRow">
-                        <label className="attachBtn">
-                          {uploadingQ === selectedQ ? "Uploading…" : "📎 Attach image or PDF"}
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            multiple
-                            hidden
-                            disabled={savedWhen === null || uploadingQ === selectedQ}
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length) addAttachments(selectedQ!, e.target.files);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                        {(attachments[selectedQ!] ?? []).length > 0 && (
-                          <span className="muted small">{(attachments[selectedQ!] ?? []).length}/{MAX_ATTACHMENTS_PER_Q} attached</span>
-                        )}
-                      </div>
-                      {attachError && <p className="muted small bad">{attachError}</p>}
-                      {(attachments[selectedQ!] ?? []).length > 0 && (
-                        <div className="attachGrid">
-                          {(attachments[selectedQ!] ?? []).map((a, i) => (
-                            <div className="attachCard" key={a.url}>
-                              {a.fileType.startsWith("image/") ? (
-                                <a href={a.url} target="_blank" rel="noreferrer"><img className="attachThumb" src={a.url} alt={a.fileName} /></a>
-                              ) : (
-                                <a href={a.url} target="_blank" rel="noreferrer" className="attachPdf">📄<span>PDF</span></a>
-                              )}
-                              <span className="attachName">{a.fileName}</span>
-                              <button className="attachRemove" onClick={() => removeAttachment(selectedQ!, i)} title="Remove">✕</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="rowBtns">
-                    <button className="btn" onClick={() => stepReview(-1)} disabled={selectedPos <= 0}>&larr; Prev</button>
-                    <button className="btn primary" onClick={() => stepReview(1)} disabled={selectedPos < 0 || selectedPos >= filteredIndices.length - 1}>Next &rarr;</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
+          <ReviewAnswers questions={questionRecords} when={savedWhen} onExportCsv={exportCsv} />
         )}
 
         {tab === "pacing" && (

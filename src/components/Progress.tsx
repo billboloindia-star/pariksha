@@ -5,6 +5,7 @@ import ScoreDonut from "./ScoreDonut";
 import TopicBars from "./TopicBars";
 import type { TopicBarRow } from "./TopicBars";
 import AiReview from "./AiReview";
+import ReviewAnswers from "./ReviewAnswers";
 import Logo from "./Logo";
 import Spinner from "./Spinner";
 import * as api from "../../shared/api";
@@ -489,10 +490,14 @@ export default function Progress({ session, onPracticeTopic, onBrowseBank }: Pro
           </section>
         )}
 
-        <p className="muted small">
-          Full question-by-question review is only available right after you submit &mdash; past
-          attempts show this summary.
-        </p>
+        {selected.questions && selected.questions.length > 0 ? (
+          <ReviewAnswers questions={selected.questions} when={selected.when} />
+        ) : (
+          <p className="muted small">
+            This attempt was saved before per-question review was available, so only the
+            summary above is shown.
+          </p>
+        )}
 
         <button className="btn primary wide" onClick={() => setSelected(null)}>&larr; Back to progress</button>
       </div>
