@@ -29,6 +29,8 @@ from src.exam_plan import ExamPlanInput, ExamPlanner, SectionConfidenceInput, We
 from src.topic_resolver import BankChapterOption, TopicResolveInput, TopicResolver
 from src.models import (
     AdaptiveLogEntry,
+    Attachment,
+    AttachmentUploadIn,
     AttemptRecord,
     AuthResponse,
     AvatarUpload,
@@ -83,6 +85,8 @@ MAX_LIBRARY_FILE_BYTES = 7 * 1024 * 1024  # API Gateway hard-caps request bodies
 MAX_LIBRARY_FILES_PER_UPLOAD = 20
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 ALLOWED_AVATAR_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024  # same API-Gateway/base64 math as MAX_LIBRARY_FILE_BYTES, kept a bit tighter
+ALLOWED_ATTACHMENT_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
 
 _reviewer = GeminiReviewer()
 _planner = ExamPlanner()
@@ -244,6 +248,24 @@ def require_premium(email: str = Depends(get_current_email)) -> str:
     return email
 
 
+@app.post("/attachments", response_model=Attachment)
+def upload_attachment(body: AttachmentUploadIn, email: str = Depends(get_current_email)):
+    if body.fileType not in ALLOWED_ATTACHMENT_TYPES:
+        raise HTTPException(status_code=400, detail="Only images or PDFs can be attached.")
+    try:
+        raw = base64.b64decode(body.fileBase64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not decode that file.")
+    if len(raw) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=413, detail="That file is too large to attach (max 6MB).")
+    attachment_id = uuid.uuid4().hex
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", body.fileName)[:120] or "attachment"
+    key = f"attachments/{email}/{attachment_id}-{safe_name}"
+    s3.put_object(Bucket=settings.bank_images_bucket, Key=key, Body=raw, ContentType=body.fileType)
+    url = f"https://{settings.bank_images_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+    return Attachment(url=url, fileName=body.fileName, fileType=body.fileType, fileSize=len(raw))
+
+
 @app.get("/attempts", response_model=List[AttemptRecord])
 def list_attempts(email: str = Depends(get_current_email)):
     res = attempts_table.query(
@@ -269,9 +291,12 @@ def update_question_note(
     try:
         attempts_table.update_item(
             Key={"userId": email, "when": when},
-            UpdateExpression=f"SET questions[{q_index}].#note = :val",
-            ExpressionAttributeNames={"#note": "note"},
-            ExpressionAttributeValues={":val": body.note},
+            UpdateExpression=f"SET questions[{q_index}].#note = :val, questions[{q_index}].#att = :att",
+            ExpressionAttributeNames={"#note": "note", "#att": "attachments"},
+            ExpressionAttributeValues={
+                ":val": body.note,
+                ":att": _to_decimal([a.model_dump() for a in (body.attachments or [])]),
+            },
             ConditionExpression="attribute_exists(userId)",
         )
     except ClientError as e:
@@ -301,9 +326,12 @@ def update_bookmark_note(bookmark_id: str, body: BookmarkNoteUpdate, email: str 
     try:
         res = bookmarks_table.update_item(
             Key={"userId": email, "bookmarkId": bookmark_id},
-            UpdateExpression="SET #note = :val",
-            ExpressionAttributeNames={"#note": "note"},
-            ExpressionAttributeValues={":val": body.note},
+            UpdateExpression="SET #note = :val, #att = :att",
+            ExpressionAttributeNames={"#note": "note", "#att": "attachments"},
+            ExpressionAttributeValues={
+                ":val": body.note,
+                ":att": _to_decimal([a.model_dump() for a in (body.attachments or [])]),
+            },
             ConditionExpression="attribute_exists(userId)",
             ReturnValues="ALL_NEW",
         )

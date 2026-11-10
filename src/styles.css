@@ -1032,6 +1032,18 @@ code{font-family:var(--mono);font-size:12.5px;background:#e8edf3;padding:1px 5px
 .qNoteBox textarea{border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit;resize:vertical}
 .qNoteStatus{align-self:flex-end}
 
+.noteAttachRow{display:flex;align-items:center;gap:10px;margin-top:4px}
+.attachBtn{display:inline-flex;align-items:center;gap:6px;border:1.5px dashed var(--line-2);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--dim);cursor:pointer}
+.attachBtn:hover{border-color:var(--navy);color:var(--navy)}
+.attachGrid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.attachCard{position:relative;width:84px;border-radius:11px;overflow:hidden;background:var(--soft);border:1px solid var(--line-2)}
+.attachThumb{width:84px;height:64px;object-fit:cover;display:block;background:var(--line-2)}
+.attachPdf{width:84px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fdecea;font-size:18px;text-decoration:none}
+.attachPdf span{font-size:9px;font-weight:700;color:#c0362c}
+.attachName{display:block;font-size:9.5px;color:var(--dim);padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attachRemove{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(16,24,40,.65);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.attachRemove:hover{background:rgba(16,24,40,.85)}
+
 /* ---------- Insights: weak areas + mistake journal ---------- */
 .mistakeRow{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff}
 .mistakeMeta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}

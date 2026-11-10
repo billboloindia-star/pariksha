@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import * as api from "../../shared/api";
-import type { Bookmark, Paper } from "../../shared/types";
+import type { Attachment, Bookmark, Paper } from "../../shared/types";
 
 interface Props {
   onLoaded: (p: Paper) => void;
@@ -21,8 +21,27 @@ export default function Bookmarks({ onLoaded }: Props) {
   const [filter, setFilter] = useState<string>("all");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [attachDraft, setAttachDraft] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [practicing, setPracticing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const MAX_ATTACHMENTS = 3;
+
+  async function addAttachments(files: FileList) {
+    const room = MAX_ATTACHMENTS - attachDraft.length;
+    if (room <= 0) { setError(`Max ${MAX_ATTACHMENTS} attachments per note.`); return; }
+    setUploading(true);
+    try {
+      const uploaded: Attachment[] = [];
+      for (const f of Array.from(files).slice(0, room)) uploaded.push(await api.uploadAttachment(f));
+      setAttachDraft((prev) => [...prev, ...uploaded]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't attach that file.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     api.fetchBookmarks().then(setBookmarks).catch(() => setBookmarks([]));
@@ -53,12 +72,23 @@ export default function Bookmarks({ onLoaded }: Props) {
 
   async function saveNote(b: Bookmark) {
     try {
-      const updated = await api.updateBookmarkNote(b.bookmarkId, noteDraft);
+      const updated = await api.updateBookmarkNote(b.bookmarkId, noteDraft, attachDraft);
       setBookmarks((prev) => prev?.map((x) => (x.bookmarkId === b.bookmarkId ? updated : x)) ?? null);
     } catch {
       setError("Couldn't save that note — try again.");
     }
     setEditingNote(null);
+    setAttachDraft([]);
+  }
+
+  async function removeAttachment(b: Bookmark, i: number) {
+    const next = (b.attachments ?? []).filter((_, idx) => idx !== i);
+    try {
+      const updated = await api.updateBookmarkNote(b.bookmarkId, b.note ?? "", next);
+      setBookmarks((prev) => prev?.map((x) => (x.bookmarkId === b.bookmarkId ? updated : x)) ?? null);
+    } catch {
+      setError("Couldn't remove that attachment — try again.");
+    }
   }
 
   async function remove(b: Bookmark) {
@@ -160,9 +190,38 @@ export default function Bookmarks({ onLoaded }: Props) {
                               placeholder="e.g. remember this formula, or silly mistake with signs…"
                               autoFocus
                             />
+                            <div className="noteAttachRow">
+                              <label className="attachBtn">
+                                {uploading ? "Uploading…" : "📎 Attach image or PDF"}
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  multiple
+                                  hidden
+                                  disabled={uploading}
+                                  onChange={(e) => { if (e.target.files?.length) addAttachments(e.target.files); e.target.value = ""; }}
+                                />
+                              </label>
+                              {attachDraft.length > 0 && <span className="muted small">{attachDraft.length}/{MAX_ATTACHMENTS} attached</span>}
+                            </div>
+                            {attachDraft.length > 0 && (
+                              <div className="attachGrid">
+                                {attachDraft.map((a, i) => (
+                                  <div className="attachCard" key={a.url}>
+                                    {a.fileType.startsWith("image/") ? (
+                                      <img className="attachThumb" src={a.url} alt={a.fileName} />
+                                    ) : (
+                                      <span className="attachPdf">📄<span>PDF</span></span>
+                                    )}
+                                    <span className="attachName">{a.fileName}</span>
+                                    <button className="attachRemove" onClick={() => setAttachDraft((prev) => prev.filter((_, idx) => idx !== i))} title="Remove">✕</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <div className="bkmNoteEditActions">
                               <button className="bkmRowAction" onClick={() => saveNote(b)}>Save</button>
-                              <button className="bkmRowAction danger" onClick={() => setEditingNote(null)}>Cancel</button>
+                              <button className="bkmRowAction danger" onClick={() => { setEditingNote(null); setAttachDraft([]); }}>Cancel</button>
                             </div>
                           </div>
                         ) : (
@@ -170,8 +229,23 @@ export default function Bookmarks({ onLoaded }: Props) {
                             {b.note && b.note.trim() && (
                               <div className="bkmRowNote"><b>Note:</b> {b.note}</div>
                             )}
+                            {b.attachments && b.attachments.length > 0 && (
+                              <div className="attachGrid">
+                                {b.attachments.map((a, i) => (
+                                  <div className="attachCard" key={a.url}>
+                                    {a.fileType.startsWith("image/") ? (
+                                      <a href={a.url} target="_blank" rel="noreferrer"><img className="attachThumb" src={a.url} alt={a.fileName} /></a>
+                                    ) : (
+                                      <a href={a.url} target="_blank" rel="noreferrer" className="attachPdf">📄<span>PDF</span></a>
+                                    )}
+                                    <span className="attachName">{a.fileName}</span>
+                                    <button className="attachRemove" onClick={() => removeAttachment(b, i)} title="Remove">✕</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <div className="bkmRowActions">
-                              <button className="bkmRowAction" onClick={() => { setEditingNote(b.bookmarkId); setNoteDraft(b.note ?? ""); }}>
+                              <button className="bkmRowAction" onClick={() => { setEditingNote(b.bookmarkId); setNoteDraft(b.note ?? ""); setAttachDraft(b.attachments ?? []); }}>
                                 {b.note?.trim() ? "Edit note" : "Add note"}
                               </button>
                               <button className="bkmRowAction" disabled={practicing === b.bookmarkId} onClick={() => practiceOne(b)}>

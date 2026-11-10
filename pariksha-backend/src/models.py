@@ -44,6 +44,23 @@ class TopicTally(BaseModel):
     att: int
 
 
+class Attachment(BaseModel):
+    """An image or PDF a user attached to a note (review-answer note or
+    bookmark note) - e.g. a photo of their rough work. Stored in the same
+    public-read bank-images bucket Note Clips already uses, under an
+    unguessable per-attachment key."""
+    url: str
+    fileName: str
+    fileType: str
+    fileSize: int
+
+
+class AttachmentUploadIn(BaseModel):
+    fileName: str
+    fileType: str
+    fileBase64: str
+
+
 class AttemptQuestionRecord(BaseModel):
     id: str
     topic: str
@@ -54,6 +71,7 @@ class AttemptQuestionRecord(BaseModel):
     given: Optional[int] = None
     timeMs: int
     note: Optional[str] = None
+    attachments: Optional[List[Attachment]] = None
 
 
 class AttemptRecord(BaseModel):
@@ -75,6 +93,7 @@ class AttemptRecord(BaseModel):
 
 class QuestionNoteUpdate(BaseModel):
     note: str
+    attachments: Optional[List[Attachment]] = None
 
 
 class LibraryUploadFile(BaseModel):
@@ -158,11 +177,13 @@ class BookmarkIn(BaseModel):
 class Bookmark(BookmarkIn):
     bookmarkId: str
     note: Optional[str] = None
+    attachments: Optional[List[Attachment]] = None
     createdAt: int
 
 
 class BookmarkNoteUpdate(BaseModel):
     note: str
+    attachments: Optional[List[Attachment]] = None
 
 
 class BookmarkPracticeRequest(BaseModel):
