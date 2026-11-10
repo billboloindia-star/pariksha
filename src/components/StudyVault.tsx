@@ -195,6 +195,7 @@ function NotesGallery({ title, pages, meta }: { title: string; pages: string[]; 
   const [selection, setSelection] = useState<CropBox | null>(null);
   const [noteText, setNoteText] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [turnDir, setTurnDir] = useState<"next" | "prev">("next");
   const imgRef = useRef<HTMLImageElement>(null);
   const canClip = api.backendEnabled() && !!api.getSession();
 
@@ -216,7 +217,10 @@ function NotesGallery({ title, pages, meta }: { title: string; pages: string[]; 
 
   if (pages.length === 0) return null;
   const close = () => { setLightbox(null); setFullscreen(false); setSelecting(false); setSelection(null); };
-  const changePage = (next: number) => { setLightbox(next); setSelecting(false); setSelection(null); setNoteText(""); setSaveState("idle"); };
+  const changePage = (next: number) => {
+    setTurnDir(next > (lightbox ?? 0) ? "next" : "prev");
+    setLightbox(next); setSelecting(false); setSelection(null); setNoteText(""); setSaveState("idle");
+  };
 
   let touchStartX = 0;
   const onTouchStart = (e: React.TouchEvent) => { touchStartX = e.touches[0].clientX; };
@@ -309,8 +313,9 @@ function NotesGallery({ title, pages, meta }: { title: string; pages: string[]; 
               onMouseLeave={onSelectUp}
             >
               <img
+                key={lightbox}
                 ref={imgRef}
-                className={fullscreen ? "svLightboxImgFull" : undefined}
+                className={`svPageTurn ${turnDir === "next" ? "turnNext" : "turnPrev"} ${fullscreen ? "svLightboxImgFull" : ""}`}
                 src={pages[lightbox]}
                 alt={`${title} — handwritten notes page ${lightbox + 1}`}
                 onTouchStart={onTouchStart}
