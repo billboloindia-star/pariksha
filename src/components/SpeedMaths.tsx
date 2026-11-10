@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   ALL_SPEED_MATH_TYPES,
   SPEED_MATH_LABELS,
@@ -6,6 +6,8 @@ import {
   checkSpeedMathAnswer,
   summarizeSpeedMathSession,
   getTableRow,
+  getSquaresList,
+  getCubesList,
   FRACTION_TABLE,
   type SpeedMathType,
   type SpeedMathQuestion,
@@ -26,115 +28,213 @@ const REF_TAB_ORDER: RefMode[] = ["tables", "squares", "cubes", "sqrt", "cbrt", 
 const REF_TAB_LABELS: Record<RefMode, string> = {
   tables: "Tables", squares: "Squares", cubes: "Cubes", sqrt: "Square Root", cbrt: "Cube Root", fractions: "Fractions",
 };
-const REF_START: Record<RefMode, number> = { tables: 7, squares: 12, cubes: 7, sqrt: 12, cbrt: 7, fractions: 2 };
-const REF_MAX: Record<RefMode, number> = { tables: 25, squares: 50, cubes: 30, sqrt: 50, cbrt: 30, fractions: 20 };
-const REF_MIN: Record<RefMode, number> = { tables: 1, squares: 1, cubes: 1, sqrt: 1, cbrt: 1, fractions: 2 };
+const REF_ACCENT: Record<RefMode, string> = {
+  tables: "#0ea5a0", squares: "#2f6fed", cubes: "#d63d6e", sqrt: "#8b5cf6", cbrt: "#f0883e", fractions: "#16a34a",
+};
+const REF_ACCENT_RGB: Record<RefMode, [number, number, number]> = {
+  tables: [14, 165, 160], squares: [47, 111, 237], cubes: [214, 61, 110],
+  sqrt: [139, 92, 246], cbrt: [240, 136, 62], fractions: [22, 163, 74],
+};
+const REF_SUB: Record<RefMode, string> = {
+  tables: "One heatmap, every table at once — darker means bigger.",
+  squares: "1² to 50², log-scaled so every bar stays readable while you still feel the acceleration.",
+  cubes: "1³ to 30³ — watch how fast the bars run away past n=10.",
+  sqrt: "Perfect squares 1 to 50 — tap a card to flip, or turn on Quiz me to test yourself first.",
+  cbrt: "Perfect cubes 1 to 30 — tap a card to flip, or turn on Quiz me to test yourself first.",
+  fractions: "Every denominator 2–20 with all its multiples — search a fraction or a % and it finds the match either way.",
+};
 
-interface RefRow { l: string; r: string | number; hi?: boolean }
-
-function refRows(mode: RefMode, n: number): RefRow[] {
-  if (mode === "tables") return getTableRow(n).map((r) => ({ l: `${n} × ${r.multiple}`, r: r.product }));
-  if (mode === "fractions") {
-    return FRACTION_TABLE.filter((f) => f.den === n).map((f) => ({ l: `${f.num}/${f.den}`, r: `${f.truncPct.toFixed(2)}%` }));
-  }
-  const max = mode === "cubes" || mode === "cbrt" ? 30 : 50;
-  const out: RefRow[] = [];
-  for (let k = Math.max(1, n - 3); k <= Math.min(max, n + 3); k++) {
-    if (mode === "squares") out.push({ l: `${k}²`, r: k * k, hi: k === n });
-    else if (mode === "cubes") out.push({ l: `${k}³`, r: k * k * k, hi: k === n });
-    else if (mode === "sqrt") out.push({ l: `√${k * k}`, r: k, hi: k === n });
-    else if (mode === "cbrt") out.push({ l: `∛${k * k * k}`, r: k, hi: k === n });
-  }
-  return out;
+function mixColor(rgb: [number, number, number], t: number): string {
+  const base = [15, 19, 28];
+  const mix = base.map((c, i) => Math.round(c + (rgb[i] - c) * (0.18 + t * 0.82)));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
 }
 
-function refLabel(mode: RefMode, n: number): string {
-  if (mode === "tables") return `Table of ${n}`;
-  if (mode === "fractions") return `Denominator ${n}`;
-  if (mode === "squares") return `${n}²`;
-  if (mode === "cubes") return `${n}³`;
-  if (mode === "sqrt") return `√${n * n} = ?`;
-  return `∛${n * n * n} = ?`;
+function TablesHeatmap({ quiz, revealed, onReveal }: { quiz: boolean; revealed: Set<string>; onReveal: (id: string) => void }) {
+  const N = 20, M = 10, max = N * M;
+  return (
+    <div className="smRefHeatWrap">
+      <div className="smRefHeatGrid" style={{ gridTemplateColumns: `44px repeat(${M}, 1fr)` }}>
+        <div className="smRefHcell hdr" />
+        {Array.from({ length: M }, (_, j) => (
+          <div className="smRefHcell hdr" key={`h${j}`}>×{j + 1}</div>
+        ))}
+        {Array.from({ length: N }, (_, i) => {
+          const n = i + 1;
+          return (
+            <Fragment key={n}>
+              <div className="smRefHcell hdr">{n}</div>
+              {Array.from({ length: M }, (_, j) => {
+                const m = j + 1;
+                const val = n * m;
+                const id = `${n}x${m}`;
+                const blank = quiz && !revealed.has(id);
+                return (
+                  <div
+                    key={id}
+                    className={`smRefHcell ${blank ? "blank" : ""}`}
+                    style={{ background: mixColor(REF_ACCENT_RGB.tables, Math.pow(val / max, 0.62)) }}
+                    title={`${n} × ${m} = ${val}`}
+                    onClick={() => onReveal(id)}
+                  >
+                    {blank ? "" : val}
+                  </div>
+                );
+              })}
+            </Fragment>
+          );
+        })}
+      </div>
+      <div className="smRefColorbar"><span>1</span><div className="smRefRamp" /><span>{max} (20×10)</span></div>
+    </div>
+  );
 }
 
-function refBig(mode: RefMode, n: number): string {
-  if (mode === "tables" || mode === "fractions") return "";
-  if (mode === "squares") return `${n * n}`;
-  if (mode === "cubes") return `${n * n * n}`;
-  return `${n}`;
+function GrowthBars({ mode, quiz, revealed, onReveal }: { mode: "squares" | "cubes"; quiz: boolean; revealed: Set<string>; onReveal: (id: string) => void }) {
+  const list = mode === "squares" ? getSquaresList(50) : getCubesList(30);
+  const values = list.map((r) => (mode === "squares" ? (r as { square: number }).square : (r as { cube: number }).cube));
+  const maxLog = Math.log(values[values.length - 1] + 1);
+  const power = mode === "squares" ? 2 : 3;
+  return (
+    <div className="smRefBars">
+      {list.map((row, idx) => {
+        const n = (row as { n: number }).n;
+        const val = values[idx];
+        const w = (Math.log(val + 1) / maxLog) * 100;
+        const id = `${mode}${n}`;
+        const blank = quiz && !revealed.has(id);
+        return (
+          <div className="smRefBarRow" key={id}>
+            <div className="smRefBarN">{n}<sup>{power}</sup></div>
+            <div className="smRefBarTrack"><div className="smRefBarFill" style={{ width: `${w}%`, background: `linear-gradient(90deg, ${mixColor(REF_ACCENT_RGB[mode], 0.35)}, ${REF_ACCENT[mode]})` }} /></div>
+            <div className={`smRefBarVal ${blank ? "blank" : ""}`} onClick={() => onReveal(id)}>{blank ? "" : val.toLocaleString()}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FlipGrid({ mode, quiz, revealed, onReveal }: { mode: "sqrt" | "cbrt"; quiz: boolean; revealed: Set<string>; onReveal: (id: string) => void }) {
+  const power = mode === "sqrt" ? 2 : 3;
+  const n = mode === "sqrt" ? 50 : 30;
+  const symbol = mode === "sqrt" ? "√" : "∛";
+  return (
+    <div className="smRefFlipGrid">
+      {Array.from({ length: n }, (_, i) => i + 1).map((i) => {
+        const val = Math.pow(i, power);
+        const id = `${mode}${i}`;
+        const blank = quiz && !revealed.has(id);
+        return (
+          <div className="smRefFlip" key={id} onClick={() => onReveal(id)}>
+            <div className="smRefFlipQ">{symbol}{val.toLocaleString()}</div>
+            <div className={`smRefFlipAns ${blank ? "blank" : ""}`}>{blank ? "" : i}</div>
+            <div className="smRefFlipHint">tap to {blank ? "reveal" : "check"}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FractionsTable({ quiz, revealed, onReveal }: { quiz: boolean; revealed: Set<string>; onReveal: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const byDen = new Map<number, typeof FRACTION_TABLE>();
+  for (const f of FRACTION_TABLE) {
+    if (!byDen.has(f.den)) byDen.set(f.den, []);
+    byDen.get(f.den)!.push(f);
+  }
+  return (
+    <div>
+      <div className="smRefSearch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder='Type a fraction (e.g. 3/7) or a % (e.g. 42.86) to find it, works either way…' />
+      </div>
+      <div className="smRefFracList">
+        {Array.from(byDen.entries()).map(([den, fracs]) => (
+          <div className="smRefFracSection" key={den}>
+            <div className="smRefFracHead">/{den}</div>
+            <div className="smRefFracRow">
+              {fracs.map((f) => {
+                const fracStr = `${f.num}/${f.den}`;
+                const pctStr = f.truncPct.toFixed(2);
+                const id = fracStr;
+                const blank = quiz && !revealed.has(id);
+                const hit = !!q && (fracStr.includes(q) || pctStr.toLowerCase().startsWith(q.replace("%", "")));
+                return (
+                  <div
+                    key={id}
+                    className={`smRefFracChip ${q ? (hit ? "match" : "dim") : ""}`}
+                    onClick={() => onReveal(id)}
+                  >
+                    <span className="fc-frac">{f.num}⁄{f.den}</span>
+                    <span className="fc-eq">=</span>
+                    <span className={`fc-pct ${blank ? "blank" : ""}`}>{blank ? "" : `${pctStr}%`}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ReferenceStage() {
   const [mode, setMode] = useState<RefMode>("tables");
-  const [current, setCurrent] = useState(7);
-  const stripRef = useRef<HTMLDivElement>(null);
+  const [quiz, setQuiz] = useState(false);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const active = stripRef.current?.querySelector(".active");
-    active?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [mode, current]);
+  function switchMode(m: RefMode) {
+    setMode(m);
+    setRevealed(new Set());
+  }
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") setCurrent((c) => Math.max(REF_MIN[mode], c - 1));
-      if (e.key === "ArrowRight") setCurrent((c) => Math.min(REF_MAX[mode], c + 1));
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mode]);
+  function toggleQuiz() {
+    setQuiz((q) => !q);
+    setRevealed(new Set());
+  }
 
-  const rows = refRows(mode, current);
-  const big = refBig(mode, current);
-  const values = mode === "fractions"
-    ? Array.from({ length: REF_MAX.fractions - REF_MIN.fractions + 1 }, (_, i) => i + REF_MIN.fractions)
-    : Array.from({ length: REF_MAX[mode] }, (_, i) => i + 1);
+  function reveal(id: string) {
+    if (!quiz) return;
+    setRevealed((prev) => new Set(prev).add(id));
+  }
 
   return (
     <div>
-      <div className="smModeRow">
-        {REF_TAB_ORDER.map((m) => (
-          <button
-            key={m}
-            className={`smModeBtn smRefTab ${mode === m ? "active" : ""}`}
-            onClick={() => { setMode(m); setCurrent(REF_START[m]); }}
-          >
-            {REF_TAB_LABELS[m]}
-          </button>
-        ))}
-      </div>
-
-      <div className="smRefStage">
-        <div className="smRefGlow" />
-        <div className="smRefPickRow">
-          <button className="smRefPickArrow" onClick={() => setCurrent((c) => Math.max(REF_MIN[mode], c - 1))}>‹</button>
-          <div className="smRefPickStrip" ref={stripRef}>
-            {values.map((v) => (
-              <button
-                key={v}
-                className={`smRefPickChip ${current === v ? "active" : ""}`}
-                onClick={() => setCurrent(v)}
-              >
-                {mode === "fractions" ? `/${v}` : v}
-              </button>
-            ))}
-          </div>
-          <button className="smRefPickArrow" onClick={() => setCurrent((c) => Math.min(REF_MAX[mode], c + 1))}>›</button>
-        </div>
-
-        <div className="smRefBigAnswer">
-          <div className={`smRefEq ${!big ? "noVal" : ""}`}>{refLabel(mode, current)}</div>
-          {big && <div className="smRefVal">{big}</div>}
-        </div>
-
-        <div className="smRefMiniList">
-          {rows.map((r) => (
-            <div className={`smRefMiniRow ${r.hi ? "current" : ""}`} key={r.l}>
-              <b>{r.l}</b><span>{r.r}</span>
-            </div>
+      <div className="smModeRow smRefTopRow">
+        <div className="smRefTabsWrap">
+          {REF_TAB_ORDER.map((m) => (
+            <button
+              key={m}
+              className={`smModeBtn smRefTab ${mode === m ? "active" : ""}`}
+              style={mode === m ? { background: REF_ACCENT[m], borderColor: REF_ACCENT[m] } : undefined}
+              onClick={() => switchMode(m)}
+            >
+              {REF_TAB_LABELS[m]}
+            </button>
           ))}
         </div>
+        <button className={`smRefQuizToggle ${quiz ? "on" : ""}`} onClick={toggleQuiz}>
+          <span className="knob" />
+          <span>Quiz me</span>
+        </button>
+      </div>
 
-        <div className="smRefHint">Use ← → or tap the strip above to jump between numbers.</div>
+      <div className="smRefStage2" style={{ ["--smRefAccent" as string]: REF_ACCENT[mode] }}>
+        <div className="smRefStage2Glow" />
+        <p className="smRefSub">{REF_SUB[mode]}</p>
+
+        {mode === "tables" && <TablesHeatmap quiz={quiz} revealed={revealed} onReveal={reveal} />}
+        {(mode === "squares" || mode === "cubes") && <GrowthBars mode={mode} quiz={quiz} revealed={revealed} onReveal={reveal} />}
+        {(mode === "sqrt" || mode === "cbrt") && <FlipGrid mode={mode} quiz={quiz} revealed={revealed} onReveal={reveal} />}
+        {mode === "fractions" && <FractionsTable quiz={quiz} revealed={revealed} onReveal={reveal} />}
+
+        <div className="smRefHint">
+          {quiz ? "Values are hidden — tap any cell/bar/card to reveal it." : 'Flip "Quiz me" on to test yourself before you look.'}
+        </div>
       </div>
     </div>
   );
